@@ -189,4 +189,4 @@ Anderson Fernandes do Nascimento
 
 ## Support
 
-If you encounter any issues or need help, please [open an issue](https://github.com/yourusername/Maui.GlobalKeyboardCapture/issues).
+If you encounter any issues or need help, please [open an issue](https://github.com/afernandes/Maui.GlobalKeyboardCapture/issues).
