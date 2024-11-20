@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="64" fill="#2B5797"/>
+  
+  <!-- Keyboard -->
+  <rect x="96" y="320" width="320" height="120" rx="16" fill="#ffffff"/>
+  <rect x="116" y="340" width="40" height="30" rx="4" fill="#2B5797"/>
+  <rect x="166" y="340" width="40" height="30" rx="4" fill="#2B5797"/>
+  <rect x="216" y="340" width="40" height="30" rx="4" fill="#2B5797"/>
+  <rect x="116" y="380" width="180" height="30" rx="4" fill="#2B5797"/>
+  
+  <!-- Barcode -->
+  <g transform="translate(96, 80)">
+    <rect x="0" y="0" width="320" height="180" rx="16" fill="#ffffff"/>
+    <rect x="30" y="30" width="4" height="120" fill="#2B5797"/>
+    <rect x="40" y="30" width="2" height="120" fill="#2B5797"/>
+    <rect x="50" y="30" width="8" height="120" fill="#2B5797"/>
+    <rect x="70" y="30" width="4" height="120" fill="#2B5797"/>
+    <rect x="80" y="30" width="6" height="120" fill="#2B5797"/>
+    <rect x="95" y="30" width="2" height="120" fill="#2B5797"/>
+    <rect x="105" y="30" width="8" height="120" fill="#2B5797"/>
+    <rect x="120" y="30" width="4" height="120" fill="#2B5797"/>
+    <rect x="135" y="30" width="6" height="120" fill="#2B5797"/>
+    <rect x="150" y="30" width="2" height="120" fill="#2B5797"/>
+    <rect x="160" y="30" width="8" height="120" fill="#2B5797"/>
+    <rect x="175" y="30" width="4" height="120" fill="#2B5797"/>
+    <rect x="190" y="30" width="6" height="120" fill="#2B5797"/>
+    <rect x="205" y="30" width="2" height="120" fill="#2B5797"/>
+    <rect x="215" y="30" width="8" height="120" fill="#2B5797"/>
+    <rect x="230" y="30" width="4" height="120" fill="#2B5797"/>
+    <rect x="245" y="30" width="6" height="120" fill="#2B5797"/>
+    <rect x="260" y="30" width="2" height="120" fill="#2B5797"/>
+    <rect x="270" y="30" width="8" height="120" fill="#2B5797"/>
+    <rect x="285" y="30" width="4" height="120" fill="#2B5797"/>
+  </g>
+</svg>
