@@ -1,6 +1,6 @@
 ﻿# Maui.GlobalKeyboardCapture
 
-A powerful .NET MAUI library for global keyboard capture with strong support for barcode scanners. Provides system-wide key interception, hotkeys management, and cross-platform feedback for Windows and Android.
+A powerful .NET MAUI library for global keyboard capture with strong support for barcode scanners. Provides system-wide key interception, hotkeys management.
 
 [![NuGet](https://img.shields.io/nuget/v/Maui.GlobalKeyboardCapture.svg)](https://www.nuget.org/packages/Maui.GlobalKeyboardCapture/)
 [![Downloads](https://img.shields.io/nuget/dt/Maui.GlobalKeyboardCapture.svg)](https://www.nuget.org/packages/Maui.GlobalKeyboardCapture/)
@@ -156,11 +156,6 @@ _barcodeHandler.BarcodeScanned += (sender, input) =>
 - Configurable input timeout
 - Input validation and filtering
 - Custom processing rules
-
-### Feedback System
-- Customizable sound effects
-- Vibration feedback (Android)
-- Visual feedback options
 
 ### Platform Support
 - Windows desktop applications
