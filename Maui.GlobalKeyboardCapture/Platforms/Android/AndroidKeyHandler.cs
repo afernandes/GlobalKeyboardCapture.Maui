@@ -25,36 +25,50 @@ public class AndroidKeyHandler : IPlatformKeyHandler
     {
         if (e.Action == KeyEventActions.Down && e.Flags == KeyEventFlags.FromSystem)
         {
-            var enter = e.KeyCode == Keycode.Enter;
-            var alt = e.IsAltPressed;
-            var shift = e.IsShiftPressed;
-            var control = e.IsCtrlPressed;
-            var windows = e.KeyCode == Keycode.Window;
-            var character = KeyboardHelper.ToChar(e.DisplayLabel.ToString(), shift);
-            var functionKey = (character == null) ? KeyboardHelper.ToFunction(e.DisplayLabel.ToString()) : null;
-            var down = false;
-            var up = false;
-            var left = false;
-            var right = false;
-
-            var keyDown = new Core.Models.KeyEventArgs
+            var keyEvent = new Core.Models.KeyEventArgs
             {
-                EnterKey = enter,
-                ShiftKey = shift,
-                ControlKey = control,
-                WindowsKey = windows,
-                AltKey = alt,
-                Character = character,
-                FunctionKey = functionKey,
-                PlatformEvent = e,
-                DownKey = down,
-                UpKey = up,
-                LeftKey = left,
-                RightKey = right
+                // Modifiers
+                ControlKey = e.IsCtrlPressed,
+                AltKey = e.IsAltPressed,
+                ShiftKey = e.IsShiftPressed,
+                WindowsKey = e.KeyCode == Keycode.Window,
+
+                // Navigation
+                UpKey = e.KeyCode == Keycode.DpadUp,
+                DownKey = e.KeyCode == Keycode.DpadDown,
+                LeftKey = e.KeyCode == Keycode.DpadLeft,
+                RightKey = e.KeyCode == Keycode.DpadRight,
+                HomeKey = e.KeyCode == Keycode.MoveHome,
+                EndKey = e.KeyCode == Keycode.MoveEnd,
+                PageUpKey = e.KeyCode == Keycode.PageUp,
+                PageDownKey = e.KeyCode == Keycode.PageDown,
+
+                // Edition
+                EnterKey = e.KeyCode == Keycode.Enter,
+                TabKey = e.KeyCode == Keycode.Tab,
+                BackspaceKey = e.KeyCode == Keycode.Del,
+                DeleteKey = e.KeyCode == Keycode.ForwardDel,
+                EscapeKey = e.KeyCode == Keycode.Escape,
+                SpaceKey = e.KeyCode == Keycode.Space,
+                InsertKey = e.KeyCode == Keycode.Insert,
+
+                // System
+                CapsLockKey = e.KeyCode == Keycode.CapsLock,
+                NumLockKey = e.KeyCode == Keycode.NumLock,
+                ScrollLockKey = e.KeyCode == Keycode.ScrollLock,
+                MenuKey = e.KeyCode == Keycode.Menu,
+
+                PlatformEvent = e
             };
 
-            _onKeyPressed?.Invoke(keyDown);
-            return keyDown.Handled;
+            var character = KeyboardHelper.ToChar(e.DisplayLabel.ToString());
+            var functionKey = (character == null) ? KeyboardHelper.ToFunction(e.DisplayLabel.ToString()) : null;
+
+            keyEvent.Character = character;
+            keyEvent.FunctionKey = functionKey;
+
+            _onKeyPressed?.Invoke(keyEvent);
+            return keyEvent.Handled;
         }
 
         return false;
@@ -78,54 +92,10 @@ public class AndroidKeyHandler : IPlatformKeyHandler
     {
         if (_activity?.Window != null && _originalDispatcher != null)
         {
-            _activity.Window.Callback = _originalDispatcher as IWindowCallback;
+            _activity.Window.Callback = _originalDispatcher;
             _originalDispatcher = null;
         }
         _activity = null;
         _isInitialized = false;
     }
-}
-
-public class KeyEventCallback : Java.Lang.Object, IWindowCallback
-{
-    private readonly AndroidKeyHandler _handler;
-    private readonly IWindowCallback _original;
-
-    public KeyEventCallback(AndroidKeyHandler handler, IWindowCallback original)
-    {
-        _handler = handler;
-        _original = original;
-    }
-
-    public bool DispatchKeyEvent(KeyEvent e)
-    {
-        var handled = _handler.DispatchKeyEvent(e);
-        if (handled) return true;
-        return _original?.DispatchKeyEvent(e) ?? false;
-    }
-
-    #region Implement other IWindowCallback methods
-    public bool DispatchGenericMotionEvent(MotionEvent e) => _original?.DispatchGenericMotionEvent(e) ?? false;
-    public bool DispatchKeyShortcutEvent(KeyEvent e) => _original?.DispatchKeyShortcutEvent(e) ?? false;
-    public bool DispatchPopulateAccessibilityEvent(AccessibilityEvent e) => _original?.DispatchPopulateAccessibilityEvent(e) ?? false;
-    public bool DispatchTouchEvent(MotionEvent e) => _original?.DispatchTouchEvent(e) ?? false;
-    public bool DispatchTrackballEvent(MotionEvent e) => _original?.DispatchTrackballEvent(e) ?? false;
-    public void OnActionModeFinished(ActionMode mode) => _original?.OnActionModeFinished(mode);
-    public void OnActionModeStarted(ActionMode mode) => _original?.OnActionModeStarted(mode);
-    public void OnAttachedToWindow() => _original?.OnAttachedToWindow();
-    public void OnContentChanged() => _original?.OnContentChanged();
-    public bool OnCreatePanelMenu(int featureId, IMenu menu) => _original?.OnCreatePanelMenu(featureId, menu) ?? false;
-    public View OnCreatePanelView(int featureId) => _original?.OnCreatePanelView(featureId);
-    public void OnDetachedFromWindow() => _original?.OnDetachedFromWindow();
-    public bool OnMenuItemSelected(int featureId, IMenuItem item) => _original?.OnMenuItemSelected(featureId, item) ?? false;
-    public bool OnMenuOpened(int featureId, IMenu menu) => _original?.OnMenuOpened(featureId, menu) ?? false;
-    public void OnPanelClosed(int featureId, IMenu menu) => _original?.OnPanelClosed(featureId, menu);
-    public bool OnPreparePanel(int featureId, View view, IMenu menu) => _original?.OnPreparePanel(featureId, view, menu) ?? false;
-    public bool OnSearchRequested() => _original?.OnSearchRequested() ?? false;
-    public bool OnSearchRequested(SearchEvent searchEvent) => _original?.OnSearchRequested(searchEvent) ?? false;
-    public void OnWindowAttributesChanged(WindowManagerLayoutParams attrs) => _original?.OnWindowAttributesChanged(attrs);
-    public void OnWindowFocusChanged(bool hasFocus) => _original?.OnWindowFocusChanged(hasFocus);
-    public ActionMode? OnWindowStartingActionMode(ActionMode.ICallback? callback, ActionModeType type) => _original?.OnWindowStartingActionMode(callback, type);
-    public ActionMode OnWindowStartingActionMode(ActionMode.ICallback callback) => _original?.OnWindowStartingActionMode(callback);
-    #endregion
 }

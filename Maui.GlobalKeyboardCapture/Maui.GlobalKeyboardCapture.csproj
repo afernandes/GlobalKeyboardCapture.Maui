@@ -16,7 +16,7 @@
 	</PropertyGroup>
 
 	<!--NuGet package-->
-	<PropertyGroup>
+	<PropertyGroup Condition="'$(Configuration)' == 'Release'">
 		<!-- Informações Básicas -->
 		<PackageId>Maui.GlobalKeyboardCapture</PackageId>
 		<Product>Maui.GlobalKeyboardCapture</Product>

@@ -16,6 +16,7 @@ namespace Maui.GlobalKeyboardCapture.Sample
                 {
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
                     fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+                    fonts.AddFont("FontAwesome6Brands-Regular-400.otf", "FABrands");
                 });
 
 #if DEBUG

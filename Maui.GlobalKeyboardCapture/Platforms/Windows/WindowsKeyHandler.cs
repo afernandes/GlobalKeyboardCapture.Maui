@@ -3,6 +3,7 @@ using Windows.UI.Core;
 using Maui.GlobalKeyboardCapture.Core.Interfaces;
 using Maui.GlobalKeyboardCapture.Platforms.Windows;
 using Microsoft.UI.Input;
+using Microsoft.UI.Xaml.Input;
 using KeyEventArgs = Maui.GlobalKeyboardCapture.Core.Models.KeyEventArgs;
 
 namespace Maui.GlobalKeyboardCapture;
@@ -33,42 +34,62 @@ public class WindowsKeyHandler : IPlatformKeyHandler
         }
     }
 
-    private void OnKeyDown(object sender, Microsoft.UI.Xaml.Input.KeyRoutedEventArgs args)
+    private void OnKeyDown(object sender, KeyRoutedEventArgs args)
     {
         if (args.Handled)
             return;
 
-        var enter = ((GetKeyState(VirtualKey.Enter) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down);
-        var alt = (GetKeyState(VirtualKey.Menu) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down;
-        var shift = (GetKeyState(VirtualKey.Shift) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down;
-        var control = (GetKeyState(VirtualKey.Control) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down;
-        var windows = ((GetKeyState(VirtualKey.LeftWindows) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down) || ((GetKeyState(VirtualKey.RightWindows) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down);
-        var character = KeyboardHelper.ToChar(args.Key, shift);
-        var functionKey = (character == null) ? KeyboardHelper.ToFunction(args.Key) : null;
-        var down = (GetKeyState(VirtualKey.Down) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down;
-        var up = (GetKeyState(VirtualKey.Up) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down;
-        var left = (GetKeyState(VirtualKey.Left) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down;
-        var right = (GetKeyState(VirtualKey.Right) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down;
-
-        var keyDown = new KeyEventArgs
+        var keyEvent = new Core.Models.KeyEventArgs
         {
-            EnterKey = enter,
-            ShiftKey = shift,
-            ControlKey = control,
-            WindowsKey = windows,
-            AltKey = alt,
-            Character = character,
-            FunctionKey = functionKey,
-            PlatformEvent = args,
-            DownKey = down,
-            UpKey = up,
-            LeftKey = left,
-            RightKey = right
+            // Modifiers
+            ControlKey = (GetKeyState(VirtualKey.Control) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down,
+            AltKey = (GetKeyState(VirtualKey.Menu) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down,
+            ShiftKey = (GetKeyState(VirtualKey.Shift) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down,
+            WindowsKey = ((GetKeyState(VirtualKey.LeftWindows) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down) ||
+                         ((GetKeyState(VirtualKey.RightWindows) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down),
+
+            // Navigation
+            UpKey = args.Key == VirtualKey.Up,
+            DownKey = args.Key == VirtualKey.Down,
+            LeftKey = args.Key == VirtualKey.Left,
+            RightKey = args.Key == VirtualKey.Right,
+            HomeKey = args.Key == VirtualKey.Home,
+            EndKey = args.Key == VirtualKey.End,
+            PageUpKey = args.Key == VirtualKey.PageUp,
+            PageDownKey = args.Key == VirtualKey.PageDown,
+
+            // Edition
+            EnterKey = args.Key == VirtualKey.Enter,
+            TabKey = args.Key == VirtualKey.Tab,
+            BackspaceKey = args.Key == VirtualKey.Back,
+            DeleteKey = args.Key == VirtualKey.Delete,
+            EscapeKey = args.Key == VirtualKey.Escape,
+            SpaceKey = args.Key == VirtualKey.Space,
+            InsertKey = args.Key == VirtualKey.Insert,
+
+            // System
+            CapsLockKey = args.Key == VirtualKey.CapitalLock,
+            NumLockKey = args.Key == VirtualKey.NumberKeyLock,
+            ScrollLockKey = args.Key == VirtualKey.Scroll,
+            PrintScreenKey = args.Key == VirtualKey.Print,
+            PauseBreakKey = args.Key == VirtualKey.Pause,
+            MenuKey = args.Key == VirtualKey.Application,
+
+            PlatformEvent = args
         };
 
-        _onKeyPressed?.Invoke(keyDown);
+        var character = KeyboardHelper.ToChar(args.Key);
+        var functionKey = character == null ? KeyboardHelper.ToFunction(args.Key) : null;
 
-        if (keyDown.Handled)
+        keyEvent.Character = character;
+        keyEvent.FunctionKey = functionKey;
+
+        //System.Diagnostics.Debug.WriteLine($"Key: {args.Key}, Char: {character}, Function: {functionKey}, " +
+        //    $"Modifiers: Ctrl={keyEvent.ControlKey}, Alt={keyEvent.AltKey}, Shift={keyEvent.ShiftKey}, Win={keyEvent.WindowsKey}");
+
+        _onKeyPressed?.Invoke(keyEvent);
+
+        if (keyEvent.Handled)
             args.Handled = true;
     }
 

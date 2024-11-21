@@ -1,82 +1,133 @@
 ﻿using Maui.GlobalKeyboardCapture.Core.Interfaces;
 using Maui.GlobalKeyboardCapture.Handlers;
 
-namespace Maui.GlobalKeyboardCapture.Sample
+namespace Maui.GlobalKeyboardCapture.Sample;
+
+public partial class MainPage : ContentPage
 {
-    public partial class MainPage : ContentPage
+    private readonly IKeyHandlerService _keyHandlerService;
+    private readonly KeyDisplayHandler _keyDisplayHandler;
+    private readonly BarcodeHandler _barcodeHandler;
+    private readonly HotkeyHandler _hotkeyHandler;
+
+    private int _counter = 0;
+    private bool _isEditMode = false;
+
+    public MainPage(
+        IKeyHandlerService keyHandlerService,
+        BarcodeHandler barcodeHandler,
+        HotkeyHandler hotkeyHandler)
     {
-        private readonly IKeyHandlerService _keyHandlerService;
-        private readonly BarcodeHandler _barcodeHandler;
-        private readonly HotkeyHandler _hotkeyHandler;
+        InitializeComponent();
 
-        int count = 0;
+        _keyHandlerService = keyHandlerService;
+        _barcodeHandler = barcodeHandler;
+        _hotkeyHandler = hotkeyHandler;
 
-        public MainPage(
-            IKeyHandlerService keyHandlerService,
-            BarcodeHandler barcodeHandler,
-            HotkeyHandler hotkeyHandler)
-        {
-            InitializeComponent();
+        _keyDisplayHandler = new KeyDisplayHandler();
 
-            _keyHandlerService = keyHandlerService;
-            _barcodeHandler = barcodeHandler;
-            _hotkeyHandler = hotkeyHandler;
-
-            // Configura handlers
-            SetupHandlers();
-        }
-
-        private void SetupHandlers()
-        {
-            _barcodeHandler.BarcodeScanned += OnBarcodeScanned;
-
-            _hotkeyHandler.RegisterHotkey("F2", false, false, false, EnableEditMode);
-            _hotkeyHandler.RegisterHotkey("S", true, false, false, SaveCurrentItem);
-        }
-
-        protected override void OnAppearing()
-        {
-            base.OnAppearing();
-            _keyHandlerService.RegisterHandler(_barcodeHandler);
-            _keyHandlerService.RegisterHandler(_hotkeyHandler);
-        }
-
-        protected override void OnDisappearing()
-        {
-            base.OnDisappearing();
-            _keyHandlerService.UnregisterHandler(_barcodeHandler);
-            _keyHandlerService.UnregisterHandler(_hotkeyHandler);
-        }
-
-
-        private async void SaveCurrentItem()
-        {
-            Message.Text = "Ctrl+S fired!";
-            await Task.Delay(3000);
-            Message.Text = string.Empty;
-        }
-
-        private void EnableEditMode()
-        {
-            CounterBtn.IsEnabled = !CounterBtn.IsEnabled;
-        }
-
-        private void OnBarcodeScanned(object? sender, string barcode)
-        {
-            ScannedCode.Text = barcode;
-        }
-        
-        private void OnCounterClicked(object sender, EventArgs e)
-        {
-            count++;
-
-            if (count == 1)
-                CounterBtn.Text = $"Clicked {count} time";
-            else
-                CounterBtn.Text = $"Clicked {count} times";
-
-            SemanticScreenReader.Announce(CounterBtn.Text);
-        }
+        SetupHandlers();
     }
 
+    private void SetupHandlers()
+    {
+        _hotkeyHandler.RegisterHotkey("F2", false, false, false, ToggleEditMode);
+        _hotkeyHandler.RegisterHotkey("Ctrl+S", SaveChanges);
+        _hotkeyHandler.RegisterHotkey("ESC", false, false, false, CancelOperation);
+        _hotkeyHandler.RegisterHotkey("E", false, false, true, EnableSpecialMode); // Shift+E
+        _hotkeyHandler.RegisterHotkey("VolumeUp", VolumeControlAction);
+    }
+
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
+        // Key Display Handler
+        _keyDisplayHandler.KeyPressed += OnKeyPressed;
+        _keyHandlerService.RegisterHandler(_keyDisplayHandler);
+
+        // Barcode Handler
+        _barcodeHandler.BarcodeScanned += OnBarcodeScanned;
+        _keyHandlerService.RegisterHandler(_barcodeHandler);
+
+        // Hotkey Handler
+        _keyHandlerService.RegisterHandler(_hotkeyHandler);
+    }
+
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+        _keyHandlerService.UnregisterHandler(_keyDisplayHandler);
+        _keyHandlerService.UnregisterHandler(_barcodeHandler);
+        _keyHandlerService.UnregisterHandler(_hotkeyHandler);
+        _keyDisplayHandler.KeyPressed -= OnKeyPressed;
+        _barcodeHandler.BarcodeScanned -= OnBarcodeScanned;
+    }
+
+
+    private void OnKeyPressed(object sender, string keyDisplay)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            KeyPressedLabel.Text = keyDisplay;
+        });
+    }
+
+    private void OnBarcodeScanned(object sender, string barcode)
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            ScannedCode.Text = barcode;
+            Message.Text = $"Barcode scanned at {DateTime.Now:HH:mm:ss}";
+        });
+    }
+
+    private void ToggleEditMode()
+    {
+        _isEditMode = !_isEditMode;
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            CounterBtn.IsEnabled = _isEditMode;
+            Message.Text = $"Edit mode {(_isEditMode ? "enabled" : "disabled")}";
+        });
+    }
+
+    private void SaveChanges()
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            Message.Text = $"Changes saved at {DateTime.Now:HH:mm:ss}";
+        });
+    }
+
+    private void CancelOperation()
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            Message.Text = "Operation cancelled";
+        });
+    }
+
+    private void EnableSpecialMode()
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            Message.Text = $"Special mode activated at {DateTime.Now:HH:mm:ss}";
+        });
+    }
+
+    private void VolumeControlAction()
+    {
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            Message.Text = $"Volume control action triggered at {DateTime.Now:HH:mm:ss}";
+        });
+    }
+
+    private void OnCounterClicked(object sender, EventArgs e)
+    {
+        _counter++;
+        CounterBtn.Text = $"Clicked {_counter} {(_counter == 1 ? "time" : "times")}";
+    }
+
+    
 }
