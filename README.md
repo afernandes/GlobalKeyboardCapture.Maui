@@ -5,7 +5,7 @@ A powerful .NET MAUI library for global keyboard capture with strong support for
 [![NuGet](https://img.shields.io/nuget/v/GlobalKeyboardCapture.Maui.svg)](https://www.nuget.org/packages/GlobalKeyboardCapture.Maui/)
 [![Downloads](https://img.shields.io/nuget/dt/GlobalKeyboardCapture.Maui.svg)](https://www.nuget.org/packages/GlobalKeyboardCapture.Maui/)
 
-![GlobalKeyboardCapture.Maui Demo](print.png)
+![GlobalKeyboardCapture.Maui Demo](https://raw.githubusercontent.com/afernandes/Maui.GlobalKeyboardCapture/refs/heads/main/Print.png)
 
 *Demo application showing key capture, barcode scanning, and hotkeys functionality*
 
