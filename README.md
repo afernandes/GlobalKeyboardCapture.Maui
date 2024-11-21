@@ -1,9 +1,10 @@
-﻿# GlobalKeyboardCapture.Maui
+# GlobalKeyboardCapture.Maui
 
 A powerful .NET MAUI library for global keyboard capture with strong support for barcode scanners. Provides system-wide key interception, hotkeys management.
 
 [![NuGet](https://img.shields.io/nuget/v/GlobalKeyboardCapture.Maui.svg)](https://www.nuget.org/packages/GlobalKeyboardCapture.Maui/)
 [![Downloads](https://img.shields.io/nuget/dt/GlobalKeyboardCapture.Maui.svg)](https://www.nuget.org/packages/GlobalKeyboardCapture.Maui/)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fafernandes%2FGlobalKeyboardCapture.Maui.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fafernandes%2FGlobalKeyboardCapture.Maui?ref=badge_shield)
 
 ![GlobalKeyboardCapture.Maui Demo](https://raw.githubusercontent.com/afernandes/Maui.GlobalKeyboardCapture/refs/heads/main/Print.png)
 
@@ -192,6 +193,9 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fafernandes%2FGlobalKeyboardCapture.Maui.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fafernandes%2FGlobalKeyboardCapture.Maui?ref=badge_large)
 
 ## Author
 
