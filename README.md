@@ -1,9 +1,13 @@
-﻿# Maui.GlobalKeyboardCapture
+﻿# GlobalKeyboardCapture.Maui
 
 A powerful .NET MAUI library for global keyboard capture with strong support for barcode scanners. Provides system-wide key interception, hotkeys management.
 
-[![NuGet](https://img.shields.io/nuget/v/Maui.GlobalKeyboardCapture.svg)](https://www.nuget.org/packages/Maui.GlobalKeyboardCapture/)
-[![Downloads](https://img.shields.io/nuget/dt/Maui.GlobalKeyboardCapture.svg)](https://www.nuget.org/packages/Maui.GlobalKeyboardCapture/)
+[![NuGet](https://img.shields.io/nuget/v/GlobalKeyboardCapture.Maui.svg)](https://www.nuget.org/packages/GlobalKeyboardCapture.Maui/)
+[![Downloads](https://img.shields.io/nuget/dt/GlobalKeyboardCapture.Maui.svg)](https://www.nuget.org/packages/GlobalKeyboardCapture.Maui/)
+
+![GlobalKeyboardCapture.Maui Demo](print.png)
+
+*Demo application showing key capture, barcode scanning, and hotkeys functionality*
 
 ## Features
 
@@ -28,13 +32,13 @@ A powerful .NET MAUI library for global keyboard capture with strong support for
 ## Installation
 
 ```bash
-dotnet add package Maui.GlobalKeyboardCapture
+dotnet add package GlobalKeyboardCapture.Maui
 ```
 
 Or via the NuGet Package Manager:
 
 ```
-Install-Package Maui.GlobalKeyboardCapture
+Install-Package GlobalKeyboardCapture.Maui
 ```
 
 ## Quick Start
@@ -95,7 +99,7 @@ public partial class MainPage : ContentPage
         };
 
         // Setup global hotkeys
-        _hotkeyHandler.RegisterHotkey("F2", false, false, false, () =>
+        _hotkeyHandler.RegisterHotkey("F2", () =>
         {
             EnableEditMode();
         });
@@ -129,11 +133,17 @@ public class CustomKeyHandler : IKeyHandler
 
 ```csharp
 // Single key hotkeys
-_hotkeyHandler.RegisterHotkey("F2", false, false, false, EnableEditMode);
+_hotkeyHandler.RegisterHotkey("F2", EnableEditMode);
+_hotkeyHandler.RegisterHotkey("ESC", CancelOperation);
 
 // Modifier key combinations
-_hotkeyHandler.RegisterHotkey("S", true, false, false, SaveAction);  // Ctrl+S
-_hotkeyHandler.RegisterHotkey("P", true, true, false, PrintAction); // Ctrl+Alt+P
+_hotkeyHandler.RegisterHotkey("Shift+S", SaveAction);
+_hotkeyHandler.RegisterHotkey("Ctrl+Alt+P", PrintAction);
+_hotkeyHandler.RegisterHotkey("Ctrl+Alt+Shift+P", PrintAction);
+
+//Special keys
+_hotkeyHandler.RegisterHotkey("VolumeUp", VolumeControlAction); //Android Volume Up
+_hotkeyHandler.RegisterHotkey("OEM173", VolumeControlAction); //OEM 173
 ```
 
 ### Barcode Scanner Mode
@@ -189,4 +199,4 @@ Anderson Fernandes do Nascimento
 
 ## Support
 
-If you encounter any issues or need help, please [open an issue](https://github.com/afernandes/Maui.GlobalKeyboardCapture/issues).
+If you encounter any issues or need help, please [open an issue](https://github.com/afernandes/GlobalKeyboardCapture.Maui/issues).
