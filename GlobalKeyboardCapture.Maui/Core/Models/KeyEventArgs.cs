@@ -64,7 +64,7 @@ public class KeyEventArgs
         // Função ou Caractere
         if (FunctionKey != null)
             list.Add(FunctionKey);
-        else if (Character != null)
+        else if (!string.IsNullOrWhiteSpace(Character.ToString()))
             list.Add(Character.ToString());
 
         // Teclas Especiais
