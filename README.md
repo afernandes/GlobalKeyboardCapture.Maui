@@ -6,6 +6,7 @@ A powerful .NET MAUI library for global keyboard capture with strong support for
 [![NuGet](https://img.shields.io/nuget/dt/GlobalKeyboardCapture.Maui.svg?label=Nuget&maxAge=60)](https://www.nuget.org/packages/GlobalKeyboardCapture.Maui/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?maxAge=60)](https://raw.githubusercontent.com/afernandes/GlobalKeyboardCapture.Maui/master/LICENSE)
 [![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fafernandes%2FGlobalKeyboardCapture.Maui.svg?type=shield&issueType=license)](https://app.fossa.io/projects/git%2Bgithub.com%2Fafernandes%2FGlobalKeyboardCapture.Maui?ref=badge_shield&issueType=license)
+[![.NET Support](https://img.shields.io/badge/.NET-8.0%20|%209.0-512BD4)](https://dotnet.microsoft.com/)
 
 ![GlobalKeyboardCapture.Maui Demo](https://raw.githubusercontent.com/afernandes/Maui.GlobalKeyboardCapture/refs/heads/main/Print.png)
 
