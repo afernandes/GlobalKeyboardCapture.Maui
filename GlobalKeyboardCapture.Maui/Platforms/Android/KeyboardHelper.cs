@@ -1,10 +1,12 @@
 ﻿namespace GlobalKeyboardCapture.Maui.Platforms.Android
 {
-    internal class KeyboardHelper
+    internal static class KeyboardHelper
     {
-        public static string ToFunction(string key)
+        private static readonly string[] FKeys = ["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12"];
+        
+        public static string? ToFunction(string key)
         {
-            foreach (var letter in new[] { "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12" })
+            foreach (var letter in FKeys)
             {
                 if (key.Equals(letter, StringComparison.OrdinalIgnoreCase))
                     return letter;
@@ -15,9 +17,9 @@
 
         public static char? ToChar(string key)
         {
-            key = key?.Trim();
             if (string.IsNullOrEmpty(key)) return null;
-
+            key = key.Trim();
+            
             // Espaço
             if (32 == key[0] || key.Equals("Space", StringComparison.OrdinalIgnoreCase))
                 return ' ';
