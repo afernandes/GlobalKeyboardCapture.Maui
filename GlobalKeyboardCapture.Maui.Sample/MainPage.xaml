@@ -16,7 +16,10 @@
     </ContentPage.Resources>
 
     <ScrollView>
-        <Grid RowSpacing="20" Padding="20">
+        <Grid
+            RowSpacing="20"
+            Padding="20"
+            MaximumWidthRequest="700">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -40,12 +43,13 @@
             </VerticalStackLayout>
 
             <!--  Key Display Section  -->
-            <Frame
+            <Border
                 Grid.Row="1"
                 Margin="0,10"
                 Padding="20"
-                BorderColor="{AppThemeBinding Light={StaticResource Gray300},
-                                              Dark={StaticResource Gray800}}">
+                StrokeShape="RoundRectangle 8"
+                Stroke="{AppThemeBinding Light={StaticResource Gray300},
+                                         Dark={StaticResource Gray800}}">
                 <VerticalStackLayout Spacing="15">
                     <Label
                         Text="Live Key Capture"
@@ -74,14 +78,15 @@
                         </VerticalStackLayout>
                     </Border>
                 </VerticalStackLayout>
-            </Frame>
+            </Border>
 
             <!--  Barcode Scanner Demo  -->
-            <Frame
+            <Border
                 Grid.Row="2"
                 Padding="20"
-                BorderColor="{AppThemeBinding Light={StaticResource Gray300},
-                                              Dark={StaticResource Gray800}}">
+                StrokeShape="RoundRectangle 8"
+                Stroke="{AppThemeBinding Light={StaticResource Gray300},
+                                         Dark={StaticResource Gray800}}">
                 <VerticalStackLayout Spacing="15">
                     <Label
                         Text="Barcode Scanner Demo"
@@ -109,14 +114,15 @@
                         </VerticalStackLayout>
                     </Border>
                 </VerticalStackLayout>
-            </Frame>
+            </Border>
 
             <!--  Hotkeys Demo  -->
-            <Frame
+            <Border
                 Grid.Row="3"
                 Padding="20"
-                BorderColor="{AppThemeBinding Light={StaticResource Gray300},
-                                              Dark={StaticResource Gray800}}">
+                StrokeShape="RoundRectangle 8"
+                Stroke="{AppThemeBinding Light={StaticResource Gray300},
+                                         Dark={StaticResource Gray800}}">
                 <VerticalStackLayout Spacing="15">
                     <Label
                         Text="Global Hotkeys Demo"
@@ -317,7 +323,7 @@
                         Clicked="OnCounterClicked"
                         HorizontalOptions="Fill" />
                 </VerticalStackLayout>
-            </Frame>
+            </Border>
         </Grid>
     </ScrollView>
 </ContentPage>
