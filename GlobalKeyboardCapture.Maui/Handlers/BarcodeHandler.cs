@@ -8,9 +8,9 @@ public class BarcodeHandler : IKeyHandler, IDisposable
 {
     private readonly KeyHandlerOptions _options;
     private readonly StringBuilder _buffer = new();
-    private DateTime? lastKeyPressed = null;
+    private DateTime? _lastKeyPressed = null;
 
-    public event EventHandler<string> BarcodeScanned;
+    public event EventHandler<string>? BarcodeScanned;
 
     public BarcodeHandler(KeyHandlerOptions options)
     {
@@ -24,7 +24,7 @@ public class BarcodeHandler : IKeyHandler, IDisposable
 
     public void HandleKey(Core.Models.KeyEventArgs key)
     {
-        var time = (DateTime.Now - lastKeyPressed)?.TotalMilliseconds ?? 0;
+        var time = (DateTime.Now - _lastKeyPressed)?.TotalMilliseconds ?? 0;
 
         if (time < _options.BarcodeTimeout)
             _buffer.Append(key.Character);
@@ -34,7 +34,7 @@ public class BarcodeHandler : IKeyHandler, IDisposable
             _buffer.Append(key.Character);
         }
 
-        lastKeyPressed = DateTime.Now;
+        _lastKeyPressed = DateTime.Now;
 
         if (key.EnterKey)
             if (ProcessBuffer())
@@ -43,9 +43,9 @@ public class BarcodeHandler : IKeyHandler, IDisposable
 
     private bool ProcessBuffer()
     {
-        var barcode = _buffer.ToString().Trim();
-        if (barcode.Length >= _options.MinBarcodeLength)
+        if (_buffer.Length >= _options.MinBarcodeLength)
         {
+            var barcode = _buffer.ToString().Trim();
             BarcodeScanned?.Invoke(this, barcode);
             return true;
         }

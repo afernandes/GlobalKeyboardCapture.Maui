@@ -64,8 +64,12 @@ public class KeyEventArgs
         // Função ou Caractere
         if (FunctionKey != null)
             list.Add(FunctionKey);
-        else if (!string.IsNullOrWhiteSpace(Character.ToString()))
-            list.Add(Character.ToString());
+        else
+        {
+            var charString = Character?.ToString();
+            if (!string.IsNullOrWhiteSpace(charString))
+                list.Add(charString);
+        }
 
         // Teclas Especiais
         if (EnterKey) list.Add("Enter");
@@ -94,7 +98,7 @@ public class KeyEventArgs
         if (PauseBreakKey) list.Add("PauseBreak");
         if (MenuKey) list.Add("Menu");
 
-        if (list.Any())
+        if (list.Count > 0)
             return string.Join('+', list);
 
 #if WINDOWS

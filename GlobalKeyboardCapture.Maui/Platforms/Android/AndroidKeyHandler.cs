@@ -10,10 +10,10 @@ namespace GlobalKeyboardCapture.Maui;
 
 public class AndroidKeyHandler : IPlatformKeyHandler
 {
-    private Action<Core.Models.KeyEventArgs> _onKeyPressed;
+    private Action<Core.Models.KeyEventArgs>? _onKeyPressed;
 
-    private Activity _activity;
-    private IWindowCallback _originalDispatcher;
+    private Activity? _activity;
+    private IWindowCallback? _originalDispatcher;
     private bool _isInitialized;
 
     public void ConfigureHandler(Action<Core.Models.KeyEventArgs> onKeyPressed)
@@ -23,7 +23,7 @@ public class AndroidKeyHandler : IPlatformKeyHandler
 
     public bool DispatchKeyEvent(KeyEvent e)
     {
-        if (e.Action == KeyEventActions.Down && e.Flags == KeyEventFlags.FromSystem)
+        if (e is { Action: KeyEventActions.Down, Flags: KeyEventFlags.FromSystem })
         {
             var keyEvent = new Core.Models.KeyEventArgs
             {
