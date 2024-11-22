@@ -4,7 +4,7 @@ namespace GlobalKeyboardCapture.Maui.Core.Services;
 
 public class KeyHandlerService : IKeyHandlerService, IDisposable
 {
-    private readonly List<IKeyHandler> _handlers = new();
+    private readonly HashSet<IKeyHandler> _handlers = [];
     private readonly IPlatformKeyHandler _platformHandler;
 
     public KeyHandlerService(IPlatformKeyHandler platformHandler)
@@ -15,12 +15,12 @@ public class KeyHandlerService : IKeyHandlerService, IDisposable
 
     public void Initialize(object platformView)
     {
-        _platformHandler?.Initialize(platformView);
+        _platformHandler.Initialize(platformView);
     }
 
     private void HandleKeyPress(Core.Models.KeyEventArgs key)
     {
-        foreach (var handler in _handlers.ToList())
+        foreach (var handler in _handlers)
         {
             if (handler.ShouldHandle(key))
             {
@@ -31,10 +31,7 @@ public class KeyHandlerService : IKeyHandlerService, IDisposable
 
     public void RegisterHandler(IKeyHandler handler)
     {
-        if (!_handlers.Contains(handler))
-        {
-            _handlers.Add(handler);
-        }
+        _handlers.Add(handler);
     }
 
     public void UnregisterHandler(IKeyHandler handler)
