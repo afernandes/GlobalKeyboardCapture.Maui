@@ -32,6 +32,15 @@ A powerful .NET MAUI library for global keyboard capture with strong support for
 - Input automation
 - Multi-mode keyboard capture
 
+## Full key support:
+- Standard keys (A-Z, 0-9)
+- Function keys (F1-F24)
+- Modifier keys (Ctrl, Alt, Shift)
+- Windows OEM keys (;, /, [, ], etc)
+- Android special keys (Volume, Back, Menu)
+- Navigation keys
+- Special characters
+
 ## Installation
 
 ```bash
