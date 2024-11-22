@@ -9,7 +9,7 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddKeyboardHandling(
         this IServiceCollection services,
-        Action<KeyHandlerOptions> configure = null)
+        Action<KeyHandlerOptions>? configure = null)
     {
         var options = new KeyHandlerOptions();
         configure?.Invoke(options);
