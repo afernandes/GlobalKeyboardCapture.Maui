@@ -9,25 +9,47 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
 
+        <!-- AOT Compatibility Settings -->
+        <IsAotCompatible>true</IsAotCompatible>
+        <IsTrimmable>true</IsTrimmable>
+        <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+        <TrimmerDefaultAction>copyused</TrimmerDefaultAction>
+        <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+
+        <!-- Prevent Trimming -->
+        <PreserveCollectionGenericArguments>true</PreserveCollectionGenericArguments>
+        <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+        <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+        <DisableTrimAnalyzer>false</DisableTrimAnalyzer>
+        <OptimizationPreference>size</OptimizationPreference>
+        
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
-		
+
+        <CurrentVersion>1.0.2</CurrentVersion>
 	</PropertyGroup>
 
-	<!--NuGet package-->
+    <!-- Root assemblies to prevent trimming -->
+    <ItemGroup>
+        <TrimmerRootAssembly Include="$(AssemblyName)" />
+        <TrimmerRootAssembly Include="GlobalKeyboardCapture.Maui" />
+        <TrimmerRootDescriptor Include="trim.xml" />
+    </ItemGroup>
+    
+    <!--NuGet package-->
 	<PropertyGroup Condition="'$(Configuration)' == 'Release'">
 		<!-- Informações Básicas -->
 		<PackageId>GlobalKeyboardCapture.Maui</PackageId>
 		<Product>GlobalKeyboardCapture.Maui</Product>
-		<Version>1.0.1</Version>
+		<Version>$(CurrentVersion)</Version>
 		<Authors>Anderson Fernandes do Nascimento</Authors>
 		<Company>Anderson Fernandes do Nascimento</Company>
 		
 		<!-- Versão detalhada -->
-		<AssemblyVersion>1.0.1.0</AssemblyVersion>
-		<FileVersion>1.0.1.0</FileVersion>
-		<PackageVersion>1.0.1</PackageVersion>
+		<AssemblyVersion>$(CurrentVersion).0</AssemblyVersion>
+		<FileVersion>$(CurrentVersion).0</FileVersion>
+		<PackageVersion>$(CurrentVersion)</PackageVersion>
 
 		<!-- Descrições -->
 		<Title>MAUI Global Keyboard Capture</Title>

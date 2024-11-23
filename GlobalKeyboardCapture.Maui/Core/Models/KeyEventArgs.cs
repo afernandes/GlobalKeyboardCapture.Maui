@@ -1,21 +1,28 @@
-﻿namespace GlobalKeyboardCapture.Maui.Core.Models;
+﻿using System.Runtime.CompilerServices;
+using System.Text;
 
-public class KeyEventArgs
+namespace GlobalKeyboardCapture.Maui.Core.Models;
+
+public sealed class KeyEventArgs
 {
-    public object PlatformEvent { get; set; }
-    public bool Handled { get; set; } = false;
+    // Constants for string builder initial capacity
+    private const int INITIAL_TOSTRING_CAPACITY = 32;
 
-    // Caracteres e Função
+    // Platform-specific event
+    public object PlatformEvent { get; set; }
+    public bool Handled { get; set; }
+
+    // Characters and Function
     public char? Character { get; set; }
     public string? FunctionKey { get; set; }
 
-    // Teclas Modificadoras
+    // Modifier Keys
     public bool ControlKey { get; set; }
     public bool AltKey { get; set; }
     public bool ShiftKey { get; set; }
     public bool WindowsKey { get; set; }
 
-    // Teclas de Navegação
+    // Navigation Keys
     public bool UpKey { get; set; }
     public bool DownKey { get; set; }
     public bool LeftKey { get; set; }
@@ -25,7 +32,7 @@ public class KeyEventArgs
     public bool PageUpKey { get; set; }
     public bool PageDownKey { get; set; }
 
-    // Teclas de Edição
+    // Editing Keys
     public bool EnterKey { get; set; }
     public bool TabKey { get; set; }
     public bool BackspaceKey { get; set; }
@@ -34,7 +41,7 @@ public class KeyEventArgs
     public bool SpaceKey { get; set; }
     public bool InsertKey { get; set; }
 
-    // Teclas de Sistema
+    // System Keys
     public bool CapsLockKey { get; set; }
     public bool NumLockKey { get; set; }
     public bool ScrollLockKey { get; set; }
@@ -42,80 +49,112 @@ public class KeyEventArgs
     public bool PauseBreakKey { get; set; }
     public bool MenuKey { get; set; }
 
-    // Helpers
-    public bool OnlyWindows => WindowsKey && !AltKey && !ControlKey && !ShiftKey;
-    public bool OnlyAlt => !WindowsKey && AltKey && !ControlKey && !ShiftKey;
-    public bool OnlyControl => !WindowsKey && !AltKey && ControlKey && !ShiftKey;
-    public bool OnlyShift => !WindowsKey && !AltKey && !ControlKey && ShiftKey;
-    public bool NoSpecialKeysPressed => !WindowsKey && !AltKey && !ControlKey && !ShiftKey;
-    public bool AnySpecialKeyPressed => WindowsKey || AltKey || ControlKey || ShiftKey;
+    public bool OnlyWindows
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => WindowsKey && !AltKey && !ControlKey && !ShiftKey;
+    }
 
-    // ToString implementation
+    public bool OnlyAlt
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => !WindowsKey && AltKey && !ControlKey && !ShiftKey;
+    }
+
+    public bool OnlyControl
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => !WindowsKey && !AltKey && ControlKey && !ShiftKey;
+    }
+
+    public bool OnlyShift
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => !WindowsKey && !AltKey && !ControlKey && ShiftKey;
+    }
+
+    public bool NoSpecialKeysPressed
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => !WindowsKey && !AltKey && !ControlKey && !ShiftKey;
+    }
+
+    public bool AnySpecialKeyPressed
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => WindowsKey || AltKey || ControlKey || ShiftKey;
+    }
+
+    // ToString implementation optimized
     public override string ToString()
     {
-        var list = new List<string>();
+        var list = new StringBuilder(INITIAL_TOSTRING_CAPACITY);
+        var needsSeparator = false;
 
-        // Modificadores
-        if (ControlKey) list.Add("Ctrl");
-        if (AltKey) list.Add("Alt");
-        if (ShiftKey) list.Add("Shift");
-        if (WindowsKey) list.Add("Win");
-
-        // Função ou Caractere
-        if (FunctionKey != null)
-            list.Add(FunctionKey);
-        else
+        // Helper method to append with separator
+        void AppendWithSeparator(string value)
         {
-            var charString = Character?.ToString();
-            if (!string.IsNullOrWhiteSpace(charString))
-                list.Add(charString);
+            if (needsSeparator)
+                list.Append('+');
+            list.Append(value);
+            needsSeparator = true;
         }
 
-        // Teclas Especiais
-        if (EnterKey) list.Add("Enter");
-        if (TabKey) list.Add("Tab");
-        if (BackspaceKey) list.Add("Backspace");
-        if (DeleteKey) list.Add("Delete");
-        if (EscapeKey) list.Add("Esc");
-        if (SpaceKey) list.Add("Space");
-        if (InsertKey) list.Add("Insert");
+        // Modifiers
+        if (ControlKey) AppendWithSeparator("Ctrl");
+        if (AltKey) AppendWithSeparator("Alt");
+        if (ShiftKey) AppendWithSeparator("Shift");
+        if (WindowsKey) AppendWithSeparator("Win");
 
-        // Navegação
-        if (UpKey) list.Add("Up");
-        if (DownKey) list.Add("Down");
-        if (LeftKey) list.Add("Left");
-        if (RightKey) list.Add("Right");
-        if (HomeKey) list.Add("Home");
-        if (EndKey) list.Add("End");
-        if (PageUpKey) list.Add("PageUp");
-        if (PageDownKey) list.Add("PageDown");
+        // Function or Character
+        if (FunctionKey != null)
+            AppendWithSeparator(FunctionKey);
+        else if (Character.HasValue)
+            AppendWithSeparator(Character.Value.ToString());
 
-        // Sistema
-        if (CapsLockKey) list.Add("CapsLock");
-        if (NumLockKey) list.Add("NumLock");
-        if (ScrollLockKey) list.Add("ScrollLock");
-        if (PrintScreenKey) list.Add("PrintScreen");
-        if (PauseBreakKey) list.Add("PauseBreak");
-        if (MenuKey) list.Add("Menu");
+        // Special Keys
+        if (EnterKey) AppendWithSeparator("Enter");
+        if (TabKey) AppendWithSeparator("Tab");
+        if (BackspaceKey) AppendWithSeparator("Backspace");
+        if (DeleteKey) AppendWithSeparator("Delete");
+        if (EscapeKey) AppendWithSeparator("Esc");
+        if (SpaceKey) AppendWithSeparator("Space");
+        if (InsertKey) AppendWithSeparator("Insert");
 
-        if (list.Count > 0)
-            return string.Join('+', list);
+        // Navigation
+        if (UpKey) AppendWithSeparator("Up");
+        if (DownKey) AppendWithSeparator("Down");
+        if (LeftKey) AppendWithSeparator("Left");
+        if (RightKey) AppendWithSeparator("Right");
+        if (HomeKey) AppendWithSeparator("Home");
+        if (EndKey) AppendWithSeparator("End");
+        if (PageUpKey) AppendWithSeparator("PageUp");
+        if (PageDownKey) AppendWithSeparator("PageDown");
 
+        // System
+        if (CapsLockKey) AppendWithSeparator("CapsLock");
+        if (NumLockKey) AppendWithSeparator("NumLock");
+        if (ScrollLockKey) AppendWithSeparator("ScrollLock");
+        if (PrintScreenKey) AppendWithSeparator("PrintScreen");
+        if (PauseBreakKey) AppendWithSeparator("PauseBreak");
+        if (MenuKey) AppendWithSeparator("Menu");
+
+        if (list.Length > 0)
+            return list.ToString();
+
+        // Platform-specific handling
 #if WINDOWS
         if (PlatformEvent is Microsoft.UI.Xaml.Input.KeyRoutedEventArgs keyArgs)
         {
-            var key = keyArgs.Key.ToString();
-            return $"OEM{key}";
+            return $"OEM{keyArgs.Key}";
         }
 #elif ANDROID
         if (PlatformEvent is Android.Views.KeyEvent keyEvent)
         {
             var unicodeChar = (char)keyEvent.UnicodeChar;
-            
-            if (!char.IsControl(unicodeChar))
-                return unicodeChar.ToString();
-            
-            return $"{keyEvent.KeyCode}";
+            return !char.IsControl(unicodeChar) 
+                ? unicodeChar.ToString() 
+                : keyEvent.KeyCode.ToString();
         }
 #endif
         return PlatformEvent?.ToString() ?? string.Empty;

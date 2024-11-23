@@ -83,9 +83,7 @@ public class WindowsKeyHandler : IPlatformKeyHandler
 
         keyEvent.Character = character;
         keyEvent.FunctionKey = functionKey;
-
-        //System.Diagnostics.Debug.WriteLine($"Key: {args.Key}, Char: {character}, Function: {functionKey}, " +
-        //    $"Modifiers: Ctrl={keyEvent.ControlKey}, Alt={keyEvent.AltKey}, Shift={keyEvent.ShiftKey}, Win={keyEvent.WindowsKey}");
+        
 
         _onKeyPressed?.Invoke(keyEvent);
 

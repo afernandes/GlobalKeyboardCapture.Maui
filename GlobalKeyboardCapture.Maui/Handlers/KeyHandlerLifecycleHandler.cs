@@ -27,24 +27,24 @@ public class KeyHandlerLifecycleHandler : ILifecycleHandler
         if (_isInitialized) return;
 
 #if WINDOWS
-        var window = Application.Current.Windows.FirstOrDefault()?.Handler.PlatformView as Microsoft.UI.Xaml.Window;
+        var window = Application.Current?.Windows.FirstOrDefault()?.Handler?.PlatformView as Microsoft.UI.Xaml.Window;
         if (window != null)
         {
             _keyHandlerService.Initialize(window);
             _isInitialized = true;
         }
 #elif ANDROID
-            var activity = Platform.CurrentActivity;
-            if (activity?.Window?.DecorView?.RootView != null)
-            {
-                _keyHandlerService.Initialize(activity.Window.DecorView.RootView);
-                _isInitialized = true;
-            }
+        var activity = Platform.CurrentActivity;
+        if (activity?.Window?.DecorView?.RootView != null)
+        {
+            _keyHandlerService.Initialize(activity.Window.DecorView.RootView);
+            _isInitialized = true;
+        }
 #endif
     }
 
     public void OnStop()
     {
-        // Opcional: limpar recursos se necessário
+        // Optional: Clean up resources if needed
     }
 }

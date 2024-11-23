@@ -1,7 +1,6 @@
 ﻿using GlobalKeyboardCapture.Maui.Core.Interfaces;
 using GlobalKeyboardCapture.Maui.Core.Services;
 using GlobalKeyboardCapture.Maui.Handlers;
-using GlobalKeyboardCapture.Maui;
 
 namespace GlobalKeyboardCapture.Maui.Configuration;
 

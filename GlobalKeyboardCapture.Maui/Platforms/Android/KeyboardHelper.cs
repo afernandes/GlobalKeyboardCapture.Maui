@@ -1,122 +1,125 @@
-﻿namespace GlobalKeyboardCapture.Maui.Platforms.Android
-{
-    internal static class KeyboardHelper
-    {
-        private static readonly string[] FKeys = ["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12"];
-        
-        public static string? ToFunction(string key)
-        {
-            foreach (var letter in FKeys)
-            {
-                if (key.Equals(letter, StringComparison.OrdinalIgnoreCase))
-                    return letter;
-            }
+﻿using System.Runtime.CompilerServices;
 
-            return null;
+namespace GlobalKeyboardCapture.Maui.Platforms.Android;
+
+internal static class KeyboardHelper
+{
+    private static readonly HashSet<string> FKeys = new(["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12"], StringComparer.OrdinalIgnoreCase);
+    private static readonly HashSet<char> SingleCharKeys;
+    private static readonly Dictionary<string, char> KeyMap;
+
+    static KeyboardHelper()
+    {
+        // Initialize HashSet of unique characters (for quick checks)
+        SingleCharKeys = new HashSet<char>()
+            {
+                ' ' // Space
+            };
+
+        // Add letters (A-Z)
+        for (char c = 'A'; c <= 'Z'; c++)
+            SingleCharKeys.Add(c);
+
+        // Add numbers (0-9)
+        for (char c = '0'; c <= '9'; c++)
+            SingleCharKeys.Add(c);
+
+        // Initialize dictionary with adequate initial capacity
+        KeyMap = new Dictionary<string, char>(100, StringComparer.OrdinalIgnoreCase);
+
+        // Map space
+        KeyMap["SPACE"] = ' ';
+
+        // Map numbers and their variations
+        for (char n = '0'; n <= '9'; n++)
+        {
+            KeyMap[$"NUM{n}"] = n;
+            KeyMap[$"NUMPAD{n}"] = n;
         }
 
-        public static char? ToChar(string key)
+        // Map math operators and their variations (using tuple for clarity)
+        var mathOperators = new[]
         {
-            if (string.IsNullOrEmpty(key)) return null;
-            key = key.Trim();
-            
-            // Espaço
-            if (32 == key[0] || key.Equals("Space", StringComparison.OrdinalIgnoreCase))
-                return ' ';
+                (".", new[] { "PERIOD", "NUMPAD_DOT" }),
+                ("+", new[] { "PLUS", "NUMPAD_ADD" }),
+                ("-", new[] { "MINUS", "NUMPAD_SUBTRACT" }),
+                ("*", new[] { "MULTIPLY", "NUMPAD_MULTIPLY" }),
+                ("/", new[] { "DIVIDE", "NUMPAD_DIVIDE", "SLASH" })
+            };
 
-            // Letras
-            foreach (var letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZ")
-            {
-                if (key.Equals(letter.ToString(), StringComparison.OrdinalIgnoreCase))
-                    return letter;
-            }
+        foreach (var (symbol, variants) in mathOperators)
+        {
+            KeyMap[symbol] = symbol[0];
+            foreach (var variant in variants)
+                KeyMap[variant] = symbol[0];
+        }
 
-            // Números e NumPad
-            foreach (var number in "1234567890")
-            {
-                if (key.Equals(number.ToString(), StringComparison.OrdinalIgnoreCase) ||
-                    key.Equals("Num" + number) ||
-                    key.Equals("Numpad" + number))
-                    return number;
-            }
+        // Map symbols and punctuation
+        var symbolMappings = new[]
+        {
+                ("EQUALS", '='),
+                ("COMMA", ','),
+                ("SEMICOLON", ';'),
+                ("COLON", ':'),
+                ("LEFT_BRACKET", '['),
+                ("RIGHT_BRACKET", ']'),
+                ("BACKSLASH", '\\'),
+                ("APOSTROPHE", '\''),
+                ("QUOTE", '"'),
+                ("GRAVE", '`'),
+                ("TILDE", '~'),
+                ("AT", '@'),
+                ("POUND", '#'),
+                ("DOLLAR", '$'),
+                ("PERCENT", '%'),
+                ("CARET", '^'),
+                ("AMPERSAND", '&'),
+                ("UNDERSCORE", '_'),
+                ("PIPE", '|'),
+                ("EXCLAMATION", '!'),
+                ("QUESTION", '?'),
+                ("PARENTHESIS_LEFT", '('),
+                ("PARENTHESIS_RIGHT", ')'),
+                ("BRACE_LEFT", '{'),
+                ("BRACE_RIGHT", '}')
+            };
 
-            // Operadores matemáticos e pontuação
-            switch (key.ToUpper())
-            {
-                // Operadores matemáticos
-                case "PERIOD":
-                case "NUMPAD_DOT":
-                case ".": return '.';
-                case "PLUS":
-                case "NUMPAD_ADD":
-                case "+": return '+';
-                case "MINUS":
-                case "NUMPAD_SUBTRACT":
-                case "-": return '-';
-                case "MULTIPLY":
-                case "NUMPAD_MULTIPLY":
-                case "*": return '*';
-                case "DIVIDE":
-                case "NUMPAD_DIVIDE":
-                case "SLASH":
-                case "/": return '/';
-
-                // Símbolos e pontuação
-                case "EQUALS":
-                case "=": return '=';
-                case "COMMA":
-                case ",": return ',';
-                case "SEMICOLON":
-                case ";": return ';';
-                case "COLON":
-                case ":": return ':';
-                case "LEFT_BRACKET":
-                case "[": return '[';
-                case "RIGHT_BRACKET":
-                case "]": return ']';
-                case "BACKSLASH":
-                case "\\": return '\\';
-                case "APOSTROPHE":
-                case "'": return '\'';
-                case "QUOTE":
-                case "\"": return '"';
-                case "GRAVE":
-                case "`": return '`';
-                case "TILDE":
-                case "~": return '~';
-
-                // Símbolos especiais
-                case "AT":
-                case "@": return '@';
-                case "POUND":
-                case "#": return '#';
-                case "DOLLAR":
-                case "$": return '$';
-                case "PERCENT":
-                case "%": return '%';
-                case "CARET":
-                case "^": return '^';
-                case "AMPERSAND":
-                case "&": return '&';
-                case "UNDERSCORE":
-                case "_": return '_';
-                case "PIPE":
-                case "|": return '|';
-                case "EXCLAMATION":
-                case "!": return '!';
-                case "QUESTION":
-                case "?": return '?';
-                case "PARENTHESIS_LEFT":
-                case "(": return '(';
-                case "PARENTHESIS_RIGHT":
-                case ")": return ')';
-                case "BRACE_LEFT":
-                case "{": return '{';
-                case "BRACE_RIGHT":
-                case "}": return '}';
-            }
-
-            return null;
+        // Add symbols and their characters
+        foreach (var (word, symbol) in symbolMappings)
+        {
+            KeyMap[word] = symbol;
+            SingleCharKeys.Add(symbol);
         }
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static string? ToFunction(string key)
+    {
+        return FKeys.Contains(key) ? key : null;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static char? ToChar(string? key)
+    {
+        if (string.IsNullOrEmpty(key))
+            return null;
+
+        return ProcessKey(key.AsSpan());
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static char? ProcessKey(ReadOnlySpan<char> key)
+    {
+        // Remove whitespace
+        key = key.Trim();
+        if (key.IsEmpty) return null;
+
+        // Check single character (most common case)
+        if (key.Length == 1 && SingleCharKeys.Contains(char.ToUpperInvariant(key[0])))
+            return char.ToUpperInvariant(key[0]);
+
+        // Search in key mappings dictionary
+        return KeyMap.TryGetValue(key.ToString(), out char value) ? value : null;
+    }
 }
+

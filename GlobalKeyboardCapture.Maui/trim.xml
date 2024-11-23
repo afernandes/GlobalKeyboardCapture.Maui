@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<linker>
+    <assembly fullname="GlobalKeyboardCapture.Maui" preserve="all">
+        <type fullname="*" preserve="all" required="true"/>
+        <namespace fullname="*" preserve="all"/>
+        <attributes preserve="all"/>
+        <events preserve="all"/>
+    </assembly>
+</linker>

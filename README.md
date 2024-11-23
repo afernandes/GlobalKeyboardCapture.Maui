@@ -140,23 +140,39 @@ public class CustomKeyHandler : IKeyHandler
     }
 }
 ```
-
 ### Global Hotkeys
+
+The library features a smart hotkey normalization system that allows flexible registration of keyboard shortcuts:
 
 ```csharp
 // Single key hotkeys
 _hotkeyHandler.RegisterHotkey("F2", EnableEditMode);
 _hotkeyHandler.RegisterHotkey("ESC", CancelOperation);
 
-// Modifier key combinations
-_hotkeyHandler.RegisterHotkey("Shift+S", SaveAction);
-_hotkeyHandler.RegisterHotkey("Ctrl+Alt+P", PrintAction);
+// All these registrations trigger the same hotkey (Ctrl+Alt+Shift+P)
 _hotkeyHandler.RegisterHotkey("Ctrl+Alt+Shift+P", PrintAction);
+_hotkeyHandler.RegisterHotkey("Shift+Ctrl+Alt+P", PrintAction);
+_hotkeyHandler.RegisterHotkey("Alt+Shift+Control+P", PrintAction);
+
+// Supports common aliases
+_hotkeyHandler.RegisterHotkey("Control+Alt+P", PrintAction);  // "Control" is normalized to "Ctrl"
+_hotkeyHandler.RegisterHotkey("Windows+Shift+X", ActionX);    // "Windows" is normalized to "Win"
+
+// Case-insensitive handling
+_hotkeyHandler.RegisterHotkey("CTRL+ALT+P", PrintAction);
+_hotkeyHandler.RegisterHotkey("ctrl+alt+p", PrintAction);
 
 //Special keys
 _hotkeyHandler.RegisterHotkey("VolumeUp", VolumeControlAction); //Android Volume Up
 _hotkeyHandler.RegisterHotkey("OEM173", VolumeControlAction); //OEM 173
 ```
+
+The hotkey system provides:
+- Automatic normalization of modifier order (Ctrl → Alt → Shift → Win)
+- Case-insensitive handling
+- Common alias support (e.g., "Control" → "Ctrl")
+- Consistent behavior regardless of registration order
+- High-performance implementation with minimal allocations
 
 ### Barcode Scanner Mode
 
@@ -166,6 +182,16 @@ _barcodeHandler.BarcodeScanned += (sender, input) =>
     ProcessProduct(input); 
 };
 ```
+
+### Performance Optimizations
+
+The library is optimized for performance and efficiency:
+
+- **Minimal Allocations**: Uses modern .NET features to minimize garbage collection pressure
+- **Fast Lookups**: Optimized dictionary implementations for hotkey matching
+- **Efficient String Handling**: Smart string comparison and normalization
+- **Aggressive Inlining**: Critical paths are optimized for speed
+- **Memory Efficiency**: Careful management of memory allocations in hot paths
 
 ## Key Features
 

@@ -1,61 +1,89 @@
-﻿using GlobalKeyboardCapture.Maui.Configuration;
-using GlobalKeyboardCapture.Maui.Core.Interfaces;
+﻿using System.Runtime.CompilerServices;
 using System.Text;
+using GlobalKeyboardCapture.Maui.Configuration;
+using GlobalKeyboardCapture.Maui.Core.Interfaces;
+using GlobalKeyboardCapture.Maui.Core.Models;
 
 namespace GlobalKeyboardCapture.Maui.Handlers;
 
-public class BarcodeHandler : IKeyHandler, IDisposable
+public sealed class BarcodeHandler : IKeyHandler, IDisposable
 {
+    private const int DEFAULT_BUFFER_CAPACITY = 50;
+
     private readonly KeyHandlerOptions _options;
-    private readonly StringBuilder _buffer = new();
-    private DateTime? _lastKeyPressed = null;
+    private readonly StringBuilder _buffer;
+    private DateTime _lastKeyPressed;
+    private bool _isDisposed;
 
     public event EventHandler<string>? BarcodeScanned;
 
     public BarcodeHandler(KeyHandlerOptions options)
     {
-        _options = options;
+        _options = options ?? throw new ArgumentNullException(nameof(options));
+        _buffer = new StringBuilder(DEFAULT_BUFFER_CAPACITY);
+        _lastKeyPressed = DateTime.Now;
     }
 
-    public bool ShouldHandle(Core.Models.KeyEventArgs key)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool ShouldHandle(KeyEventArgs key)
     {
+        ArgumentNullException.ThrowIfNull(key);
         return key.NoSpecialKeysPressed && (key.Character != null || key.EnterKey);
     }
 
-    public void HandleKey(Core.Models.KeyEventArgs key)
+    public void HandleKey(KeyEventArgs key)
     {
-        var time = (DateTime.Now - _lastKeyPressed)?.TotalMilliseconds ?? 0;
+        ArgumentNullException.ThrowIfNull(key);
+        ThrowIfDisposed();
 
-        if (time < _options.BarcodeTimeout)
-            _buffer.Append(key.Character);
-        else
-        {
+        var now = DateTime.Now;
+        var timeSinceLastKey = (now - _lastKeyPressed).TotalMilliseconds;
+
+        if (timeSinceLastKey >= _options.BarcodeTimeout)
             _buffer.Clear();
+
+        if (key.Character != null)
             _buffer.Append(key.Character);
-        }
 
-        _lastKeyPressed = DateTime.Now;
+        _lastKeyPressed = now;
 
-        if (key.EnterKey)
-            if (ProcessBuffer())
-                key.Handled = true;
+        if (key.EnterKey && ProcessBuffer())
+            key.Handled = true;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool ProcessBuffer()
     {
-        if (_buffer.Length >= _options.MinBarcodeLength)
+        if (_buffer.Length < _options.MinBarcodeLength)
         {
-            var barcode = _buffer.ToString().Trim();
-            BarcodeScanned?.Invoke(this, barcode);
-            return true;
+            _buffer.Clear();
+            return false;
         }
-        _buffer.Clear();
 
-        return false;
+        OnBarcodeScanned(_buffer.ToString().Trim());
+        return true;
+    }
+
+    private void OnBarcodeScanned(string barcode)
+    {
+        BarcodeScanned?.Invoke(this, barcode);
+        _buffer.Clear();
+    }
+
+    private void ThrowIfDisposed()
+    {
+        if (_isDisposed)
+        {
+            throw new ObjectDisposedException(nameof(BarcodeHandler));
+        }
     }
 
     public void Dispose()
     {
+        if (_isDisposed) return;
+
         _buffer.Clear();
+        _isDisposed = true;
+        GC.SuppressFinalize(this);
     }
 }
