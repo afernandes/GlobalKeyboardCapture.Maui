@@ -13,7 +13,7 @@ public class WindowsKeyHandler : IPlatformKeyHandler
     private Microsoft.UI.Xaml.Window _window;
     private Action<KeyEventArgs> _onKeyPressed;
 
-    Func<VirtualKey, CoreVirtualKeyStates> GetKeyState;
+    readonly Func<VirtualKey, CoreVirtualKeyStates> GetKeyState;
     
     public WindowsKeyHandler()
     {

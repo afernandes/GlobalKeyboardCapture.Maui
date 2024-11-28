@@ -43,7 +43,7 @@ namespace GlobalKeyboardCapture.Maui.Sample
             keyHandlerService.RegisterHandler(hotkeyHandler);
         }
 
-        public T GetService<T>()
+        public static T GetService<T>()
         {
             if (Current is { Handler.MauiContext: null })
                 throw new InvalidOperationException();
