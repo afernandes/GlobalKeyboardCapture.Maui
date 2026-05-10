@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GlobalKeyboardCapture.Maui.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GlobalKeyboardCapture.Maui", "GlobalKeyboardCapture.Maui\GlobalKeyboardCapture.Maui.csproj", "{C56BA686-23E5-4AFB-88F9-201472B6C170}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GlobalKeyboardCapture.Maui.Tests", "GlobalKeyboardCapture.Maui.Tests\GlobalKeyboardCapture.Maui.Tests.csproj", "{D4F9A1B2-7C3E-4F11-9A22-1B5E8D6F7A03}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,6 +25,10 @@ Global
 		{C56BA686-23E5-4AFB-88F9-201472B6C170}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C56BA686-23E5-4AFB-88F9-201472B6C170}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C56BA686-23E5-4AFB-88F9-201472B6C170}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D4F9A1B2-7C3E-4F11-9A22-1B5E8D6F7A03}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D4F9A1B2-7C3E-4F11-9A22-1B5E8D6F7A03}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D4F9A1B2-7C3E-4F11-9A22-1B5E8D6F7A03}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D4F9A1B2-7C3E-4F11-9A22-1B5E8D6F7A03}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

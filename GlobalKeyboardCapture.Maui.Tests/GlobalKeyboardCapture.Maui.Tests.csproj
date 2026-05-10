@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>GlobalKeyboardCapture.Maui.Tests</RootNamespace>
+    <AssemblyName>GlobalKeyboardCapture.Maui.Tests</AssemblyName>
+  </PropertyGroup>
+
+  <!--
+    The library multi-targets only MAUI platform TFMs (net{8,9}.0-android / -windows10...).
+    A plain net9.0 test project cannot ProjectReference a MAUI lib directly, so we
+    link the platform-agnostic source files and provide a tiny MainThread shim. This
+    keeps tests fast and runnable on any OS while still exercising the real production
+    code path for the logic under test.
+  -->
+  <ItemGroup>
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyEventArgs.cs" Link="Linked\KeyEventArgs.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IKeyHandler.cs" Link="Linked\IKeyHandler.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IKeyHandlerService.cs" Link="Linked\IKeyHandlerService.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IPlatformKeyHandler.cs" Link="Linked\IPlatformKeyHandler.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Services\KeyHandlerService.cs" Link="Linked\KeyHandlerService.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Configuration\KeyHandlerOptions.cs" Link="Linked\KeyHandlerOptions.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Handlers\HotkeyHandler.cs" Link="Linked\HotkeyHandler.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Handlers\BarcodeHandler.cs" Link="Linked\BarcodeHandler.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Microsoft.Maui.ApplicationModel" />
+    <Using Include="Xunit" />
+    <Using Include="FluentAssertions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+    <PackageReference Include="FluentAssertions" Version="6.12.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
+  </ItemGroup>
+
+</Project>
