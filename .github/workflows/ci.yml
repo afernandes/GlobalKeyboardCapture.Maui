@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui --ignore-failed-sources
+
+      - name: Restore tests
+        run: dotnet restore GlobalKeyboardCapture.Maui.Tests/GlobalKeyboardCapture.Maui.Tests.csproj
+
+      - name: Build tests
+        run: dotnet build GlobalKeyboardCapture.Maui.Tests/GlobalKeyboardCapture.Maui.Tests.csproj -c Release --no-restore
+
+      - name: Run tests
+        run: dotnet test GlobalKeyboardCapture.Maui.Tests/GlobalKeyboardCapture.Maui.Tests.csproj -c Release --no-build --logger "trx;LogFileName=test-results.trx"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: '**/TestResults/*.trx'
+
+  build-library:
+    name: Build library (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+
+      - name: Install MAUI workload
+        run: dotnet workload install maui --ignore-failed-sources
+
+      - name: Restore library
+        run: dotnet restore GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj
+
+      - name: Build library (Release)
+        run: dotnet build GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -c Release --no-restore
+
+      - name: Upload NuGet package
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nupkg
+          path: |
+            GlobalKeyboardCapture.Maui/bin/Release/*.nupkg
+            GlobalKeyboardCapture.Maui/bin/Release/*.snupkg

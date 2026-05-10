@@ -36,6 +36,10 @@
         <TrimmerRootAssembly Include="GlobalKeyboardCapture.Maui" />
         <TrimmerRootDescriptor Include="trim.xml" />
     </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="GlobalKeyboardCapture.Maui.Tests" />
+    </ItemGroup>
     
     <!--NuGet package-->
 	<PropertyGroup Condition="'$(Configuration)' == 'Release'">

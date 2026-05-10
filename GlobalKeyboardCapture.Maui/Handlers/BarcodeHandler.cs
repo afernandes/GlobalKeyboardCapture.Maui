@@ -12,16 +12,18 @@ public sealed class BarcodeHandler : IKeyHandler, IDisposable
 
     private readonly KeyHandlerOptions _options;
     private readonly StringBuilder _buffer;
-    private DateTime _lastKeyPressed;
+    private readonly TimeProvider _timeProvider;
+    private long _lastKeyTimestamp;
     private bool _isDisposed;
 
     public event EventHandler<string>? BarcodeScanned;
 
-    public BarcodeHandler(KeyHandlerOptions options)
+    public BarcodeHandler(KeyHandlerOptions options, TimeProvider? timeProvider = null)
     {
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _buffer = new StringBuilder(DEFAULT_BUFFER_CAPACITY);
-        _lastKeyPressed = DateTime.Now;
+        _timeProvider = timeProvider ?? TimeProvider.System;
+        _lastKeyTimestamp = _timeProvider.GetTimestamp();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -36,16 +38,16 @@ public sealed class BarcodeHandler : IKeyHandler, IDisposable
         ArgumentNullException.ThrowIfNull(key);
         ThrowIfDisposed();
 
-        var now = DateTime.Now;
-        var timeSinceLastKey = (now - _lastKeyPressed).TotalMilliseconds;
+        var nowTimestamp = _timeProvider.GetTimestamp();
+        var elapsedMs = _timeProvider.GetElapsedTime(_lastKeyTimestamp, nowTimestamp).TotalMilliseconds;
 
-        if (timeSinceLastKey >= _options.BarcodeTimeout)
+        if (elapsedMs >= _options.BarcodeTimeout)
             _buffer.Clear();
 
         if (key.Character != null)
             _buffer.Append(key.Character);
 
-        _lastKeyPressed = now;
+        _lastKeyTimestamp = nowTimestamp;
 
         if (key.EnterKey && ProcessBuffer())
             key.Handled = true;
