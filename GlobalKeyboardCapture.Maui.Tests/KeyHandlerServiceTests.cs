@@ -86,13 +86,24 @@ public class KeyHandlerServiceTests
     }
 
     [Fact]
-    public void InitializeIsIdempotent()
+    public void InitializeIsIdempotentForSamePlatformView()
+    {
+        var (svc, platform) = Build();
+        var view = new object();
+        svc.Initialize(view);
+        svc.Initialize(view);
+
+        platform.InitializeCallCount.Should().Be(1);
+    }
+
+    [Fact]
+    public void InitializeRebindsWhenPlatformViewChanges()
     {
         var (svc, platform) = Build();
         svc.Initialize(new object());
         svc.Initialize(new object());
 
-        platform.InitializeCallCount.Should().Be(1);
+        platform.InitializeCallCount.Should().Be(2);
     }
 
     [Fact]

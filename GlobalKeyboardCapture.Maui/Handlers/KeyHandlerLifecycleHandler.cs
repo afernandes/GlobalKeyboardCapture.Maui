@@ -5,7 +5,6 @@ namespace GlobalKeyboardCapture.Maui.Handlers;
 public class KeyHandlerLifecycleHandler : ILifecycleHandler
 {
     private readonly IKeyHandlerService _keyHandlerService;
-    private bool _isInitialized;
 
     public KeyHandlerLifecycleHandler(IKeyHandlerService keyHandlerService)
     {
@@ -14,37 +13,32 @@ public class KeyHandlerLifecycleHandler : ILifecycleHandler
 
     public void OnStart()
     {
-        InitializeIfNeeded();
+        BindCurrentPlatformView();
     }
 
     public void OnResume()
     {
-        InitializeIfNeeded();
+        BindCurrentPlatformView();
     }
 
-    private void InitializeIfNeeded()
+    private void BindCurrentPlatformView()
     {
-        if (_isInitialized) return;
-
 #if WINDOWS
         var window = Application.Current?.Windows.FirstOrDefault()?.Handler?.PlatformView as Microsoft.UI.Xaml.Window;
         if (window != null)
         {
             _keyHandlerService.Initialize(window);
-            _isInitialized = true;
         }
 #elif ANDROID
         var activity = Platform.CurrentActivity;
         if (activity?.Window?.DecorView?.RootView != null)
         {
             _keyHandlerService.Initialize(activity.Window.DecorView.RootView);
-            _isInitialized = true;
         }
 #endif
     }
 
     public void OnStop()
     {
-        // Optional: Clean up resources if needed
     }
 }

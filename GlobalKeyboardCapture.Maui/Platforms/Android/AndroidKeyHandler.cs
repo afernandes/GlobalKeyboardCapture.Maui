@@ -17,7 +17,6 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
     private Action<KeyEventArgs>? _onKeyPressed;
     private Activity? _activity;
     private IWindowCallback? _originalDispatcher;
-    private bool _isInitialized;
     private bool _isDisposed;
 
     public void ConfigureHandler(Action<Core.Models.KeyEventArgs> onKeyPressed)
@@ -48,19 +47,34 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
 
         lock (_lockObject)
         {
-            if (_isInitialized) return;
-
-            _activity = Platform.CurrentActivity
+            var currentActivity = Platform.CurrentActivity
                 ?? throw new InvalidOperationException("Current activity is null");
 
-            if (_activity?.Window == null)
+            if (currentActivity.Window == null)
                 throw new InvalidOperationException("Activity window is null");
 
-            // Install global event dispatcher
+            // No-op if we're already bound to this same activity.
+            if (ReferenceEquals(_activity, currentActivity))
+                return;
+
+            // Restore the previous dispatcher before binding to the new activity.
+            // This handles Android Activity recreation (e.g. configuration changes).
+            RestoreOriginalDispatcher();
+
+            _activity = currentActivity;
             _originalDispatcher = _activity.Window.Callback;
             _activity.Window.Callback = new KeyEventCallback(this, _activity.Window.Callback!);
-            _isInitialized = true;
         }
+    }
+
+    private void RestoreOriginalDispatcher()
+    {
+        if (_activity?.Window != null && _originalDispatcher != null)
+        {
+            _activity.Window.Callback = _originalDispatcher;
+        }
+        _originalDispatcher = null;
+        _activity = null;
     }
 
     public void Cleanup()
@@ -137,14 +151,7 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
         {
             if (_isDisposed) return;
 
-            if (_activity?.Window != null && _originalDispatcher != null)
-            {
-                _activity.Window.Callback = _originalDispatcher;
-            }
-
-            _originalDispatcher = null;
-            _activity = null;
-            _isInitialized = false;
+            RestoreOriginalDispatcher();
             _isDisposed = true;
         }
     }

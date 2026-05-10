@@ -13,7 +13,7 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
     private readonly HashSet<IKeyHandler> _handlers;
     private readonly IPlatformKeyHandler _platformHandler;
     private readonly ILogger<KeyHandlerService> _logger;
-    private bool _isInitialized;
+    private object? _boundPlatformView;
     private bool _isDisposed;
 
     public KeyHandlerService(
@@ -33,12 +33,12 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
 
         lock (_lockObject)
         {
-            if (_isInitialized) return;
+            if (ReferenceEquals(_boundPlatformView, platformView)) return;
 
             try
             {
                 _platformHandler.Initialize(platformView);
-                _isInitialized = true;
+                _boundPlatformView = platformView;
             }
             catch (Exception ex)
             {
@@ -128,6 +128,7 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
                 {
                     _platformHandler?.Cleanup();
                     _handlers.Clear();
+                    _boundPlatformView = null;
                 }
                 catch (Exception ex)
                 {

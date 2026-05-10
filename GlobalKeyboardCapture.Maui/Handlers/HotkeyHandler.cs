@@ -15,6 +15,37 @@ public sealed class HotkeyHandler : IKeyHandler
         "ESCAPE"
     };
 
+    private static readonly Dictionary<string, Action<KeyEventArgs>> NamedKeySetters = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Enter"] = k => k.EnterKey = true,
+        ["Return"] = k => k.EnterKey = true,
+        ["Tab"] = k => k.TabKey = true,
+        ["Backspace"] = k => k.BackspaceKey = true,
+        ["Delete"] = k => k.DeleteKey = true,
+        ["Del"] = k => k.DeleteKey = true,
+        ["Space"] = k => k.SpaceKey = true,
+        ["Insert"] = k => k.InsertKey = true,
+        ["Ins"] = k => k.InsertKey = true,
+        ["Up"] = k => k.UpKey = true,
+        ["Down"] = k => k.DownKey = true,
+        ["Left"] = k => k.LeftKey = true,
+        ["Right"] = k => k.RightKey = true,
+        ["Home"] = k => k.HomeKey = true,
+        ["End"] = k => k.EndKey = true,
+        ["PageUp"] = k => k.PageUpKey = true,
+        ["PgUp"] = k => k.PageUpKey = true,
+        ["PageDown"] = k => k.PageDownKey = true,
+        ["PgDn"] = k => k.PageDownKey = true,
+        ["CapsLock"] = k => k.CapsLockKey = true,
+        ["NumLock"] = k => k.NumLockKey = true,
+        ["ScrollLock"] = k => k.ScrollLockKey = true,
+        ["PrintScreen"] = k => k.PrintScreenKey = true,
+        ["PrtSc"] = k => k.PrintScreenKey = true,
+        ["PauseBreak"] = k => k.PauseBreakKey = true,
+        ["Pause"] = k => k.PauseBreakKey = true,
+        ["Menu"] = k => k.MenuKey = true,
+    };
+
     // Ordered array of modifiers for consistent normalization
     private static readonly string[] ModifierOrder = ["Ctrl", "Alt", "Shift", "Win"];
 
@@ -155,9 +186,19 @@ public sealed class HotkeyHandler : IKeyHandler
         return true;
     }
 
-    private bool TryProcessSpecialKey(string key, KeyEventArgs hotKey)
+    private static bool TryProcessSpecialKey(string key, KeyEventArgs hotKey)
     {
-        return IsFunctionKey(key, hotKey) || IsEscapeKey(key, hotKey);
+        return IsFunctionKey(key, hotKey) || IsEscapeKey(key, hotKey) || IsNamedKey(key, hotKey);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool IsNamedKey(string key, KeyEventArgs hotKey)
+    {
+        if (!NamedKeySetters.TryGetValue(key, out var setter))
+            return false;
+
+        setter(hotKey);
+        return true;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

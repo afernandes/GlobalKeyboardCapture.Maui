@@ -10,8 +10,8 @@ namespace GlobalKeyboardCapture.Maui;
 
 public class WindowsKeyHandler : IPlatformKeyHandler
 {
-    private Microsoft.UI.Xaml.Window _window;
-    private Action<KeyEventArgs> _onKeyPressed;
+    private Microsoft.UI.Xaml.Window? _window;
+    private Action<KeyEventArgs>? _onKeyPressed;
 
     readonly Func<VirtualKey, CoreVirtualKeyStates> GetKeyState;
     
@@ -27,6 +27,11 @@ public class WindowsKeyHandler : IPlatformKeyHandler
 
     public void Initialize(object platformView)
     {
+        if (_window?.Content != null)
+        {
+            _window.Content.PreviewKeyDown -= OnKeyDown;
+        }
+
         _window = platformView as Microsoft.UI.Xaml.Window;
         if (_window?.Content != null)
         {
@@ -95,7 +100,8 @@ public class WindowsKeyHandler : IPlatformKeyHandler
     {
         if (_window?.Content != null)
         {
-            _window.Content.KeyDown -= OnKeyDown;
+            _window.Content.PreviewKeyDown -= OnKeyDown;
         }
+        _window = null;
     }
 }
