@@ -27,7 +27,7 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
 
-        <CurrentVersion>1.0.3</CurrentVersion>
+        <CurrentVersion>1.0.4</CurrentVersion>
 	</PropertyGroup>
 
     <!-- Root assemblies to prevent trimming -->
@@ -60,6 +60,11 @@
 		<Description>A powerful .NET MAUI library for global keyboard capture with support for barcode scanners, hotkeys, and cross-platform input handling.</Description>
 		<Summary>Cross-platform global keyboard capture and input handling library for .NET MAUI applications, supporting hotkeys, barcode scanners, and system-wide keyboard monitoring.</Summary>
 		<PackageReleaseNotes>
+1.0.4:
+ - Fix: AndroidKeyHandler now reports the Windows/Meta key as a modifier (WindowsKey = IsMetaPressed || KeyCode == Window), matching the Windows handler. Previously hotkeys like "Win+A" only fired on Windows.
+ - Fix: AndroidKeyHandler now detects PrintScreen (Keycode.Sysrq) and PauseBreak (Keycode.Break). Previously these keys were silently ignored on Android.
+ - Fix: Android KeyboardHelper no longer maps Space to Character=' '. Previously the Space key produced ToString() = " +Space" on Android but "Space" on Windows, breaking cross-platform hotkey registration of "Space" / "Ctrl+Space".
+
 1.0.3:
  - Fix: WindowsKeyHandler.Cleanup now unsubscribes from PreviewKeyDown (previously unsubscribed from the wrong event, leaving the handler attached and leaking subscriptions on re-init).
  - Fix: HotkeyHandler.RegisterHotkey(string, bool, bool, bool, Action) now recognizes named keys (Enter, Tab, Backspace, Delete, Space, Insert, arrows, Home, End, PageUp/PageDown, CapsLock, NumLock, ScrollLock, PrintScreen, PauseBreak, Menu) and common aliases. Previously these were silently treated as the first character of the name.

@@ -10,11 +10,11 @@ internal static class KeyboardHelper
 
     static KeyboardHelper()
     {
-        // Initialize HashSet of unique characters (for quick checks)
-        SingleCharKeys = new HashSet<char>()
-            {
-                ' ' // Space
-            };
+        // Space is intentionally excluded from both maps below: AndroidKeyHandler
+        // sets SpaceKey=true for Keycode.Space, and mapping ' ' here would also set
+        // Character=' ', producing a ToString() of " +Space" instead of the
+        // cross-platform expected "Space" (Windows leaves Character=null for Space).
+        SingleCharKeys = new HashSet<char>();
 
         // Add letters (A-Z)
         for (char c = 'A'; c <= 'Z'; c++)
@@ -26,9 +26,6 @@ internal static class KeyboardHelper
 
         // Initialize dictionary with adequate initial capacity
         KeyMap = new Dictionary<string, char>(100, StringComparer.OrdinalIgnoreCase);
-
-        // Map space
-        KeyMap["SPACE"] = ' ';
 
         // Map numbers and their variations
         for (char n = '0'; n <= '9'; n++)

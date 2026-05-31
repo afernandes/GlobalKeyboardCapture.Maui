@@ -91,7 +91,7 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
             ControlKey = e.IsCtrlPressed,
             AltKey = e.IsAltPressed,
             ShiftKey = e.IsShiftPressed,
-            WindowsKey = e.KeyCode == Keycode.Window,
+            WindowsKey = e.IsMetaPressed || e.KeyCode == Keycode.Window,
 
             // Navigation
             UpKey = e.KeyCode == Keycode.DpadUp,
@@ -116,6 +116,8 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
             CapsLockKey = e.KeyCode == Keycode.CapsLock,
             NumLockKey = e.KeyCode == Keycode.NumLock,
             ScrollLockKey = e.KeyCode == Keycode.ScrollLock,
+            PrintScreenKey = e.KeyCode == Keycode.Sysrq,
+            PauseBreakKey = e.KeyCode == Keycode.Break,
             MenuKey = e.KeyCode == Keycode.Menu,
             PlatformEvent = e
         };
