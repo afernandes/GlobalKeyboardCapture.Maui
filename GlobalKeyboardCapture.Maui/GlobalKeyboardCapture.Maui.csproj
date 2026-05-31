@@ -64,6 +64,11 @@
  - Fix: AndroidKeyHandler now reports the Windows/Meta key as a modifier (WindowsKey = IsMetaPressed || KeyCode == Window), matching the Windows handler. Previously hotkeys like "Win+A" only fired on Windows.
  - Fix: AndroidKeyHandler now detects PrintScreen (Keycode.Sysrq) and PauseBreak (Keycode.Break). Previously these keys were silently ignored on Android.
  - Fix: Android KeyboardHelper no longer maps Space to Character=' '. Previously the Space key produced ToString() = " +Space" on Android but "Space" on Windows, breaking cross-platform hotkey registration of "Space" / "Ctrl+Space".
+ - Fix: KeyHandlerService.HandleKeyPress now returns silently when the service is disposed instead of throwing on the platform input thread.
+ - Fix: KeyEventCallback on Android catches ObjectDisposedException from the handler and falls through to the original dispatcher, eliminating a Dispose race window.
+ - Fix: HotkeyHandler isolates exceptions thrown by user-supplied actions so a misbehaving hotkey no longer crashes the UI thread.
+ - Fix: BarcodeHandler clears the internal buffer in a finally block so a throwing BarcodeScanned subscriber does not contaminate the next scan.
+ - API: KeyEventArgs.PlatformEvent is now declared object? to match its actual nullable usage.
 
 1.0.3:
  - Fix: WindowsKeyHandler.Cleanup now unsubscribes from PreviewKeyDown (previously unsubscribed from the wrong event, leaving the handler attached and leaking subscriptions on re-init).

@@ -9,7 +9,7 @@ public sealed class KeyEventArgs
     private const int INITIAL_TOSTRING_CAPACITY = 32;
 
     // Platform-specific event
-    public object PlatformEvent { get; set; }
+    public object? PlatformEvent { get; set; }
     public bool Handled { get; set; }
 
     // Characters and Function

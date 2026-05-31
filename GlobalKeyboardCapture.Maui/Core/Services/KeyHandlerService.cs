@@ -56,7 +56,10 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         IKeyHandler[] currentHandlers;
         lock (_lockObject)
         {
-            ThrowIfDisposed();
+            // Silent early-return: this runs on the platform input thread and may be
+            // invoked for events already in flight after Dispose. Throwing here would
+            // crash the platform input pipeline.
+            if (_isDisposed) return;
             currentHandlers = _handlers.ToArray();
         }
 

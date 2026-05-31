@@ -174,7 +174,20 @@ public sealed class HotkeyHandler : IKeyHandler
 
         if (_hotkeyActions.TryGetValue(key.ToString(), out var action))
         {
-            MainThread.BeginInvokeOnMainThread(action);
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                try
+                {
+                    action();
+                }
+                catch (Exception ex)
+                {
+                    // Hotkey actions are user code; isolate exceptions so a misbehaving
+                    // handler does not crash the UI thread. Service ILogger is not
+                    // reachable from here, so trace and continue.
+                    System.Diagnostics.Debug.WriteLine($"[GlobalKeyboardCapture] Hotkey action threw: {ex}");
+                }
+            });
             key.Handled = true;
         }
     }
