@@ -22,7 +22,7 @@ public class P2FixesTests
     public void B7_DispatchAfterDispose_DoesNotThrow_AndIsIgnored()
     {
         var platform = new FakePlatformKeyHandler();
-        var svc = new KeyHandlerService(platform, NullLogger<KeyHandlerService>.Instance);
+        var svc = new KeyHandlerService(platform, NullLogger<KeyHandlerService>.Instance, new KeyHandlerOptions());
         var recorder = new RecordingKeyHandler();
         svc.RegisterHandler(recorder);
 

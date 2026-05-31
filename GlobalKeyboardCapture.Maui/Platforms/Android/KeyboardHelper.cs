@@ -47,6 +47,9 @@ internal static class KeyboardHelper
         foreach (var (symbol, variants) in mathOperators)
         {
             KeyMap[symbol] = symbol[0];
+            // Also accept the bare char in SingleCharKeys so ToChar(char) can short-circuit
+            // without allocating a string for a dictionary lookup (B12).
+            SingleCharKeys.Add(symbol[0]);
             foreach (var variant in variants)
                 KeyMap[variant] = symbol[0];
         }
@@ -102,6 +105,21 @@ internal static class KeyboardHelper
             return null;
 
         return ProcessKey(key.AsSpan());
+    }
+
+    /// <summary>
+    /// Allocation-free overload used on the hot path from <c>AndroidKeyHandler.ProcessKeyEvent</c>,
+    /// where <c>KeyEvent.DisplayLabel</c> is already a <see cref="char"/>. Avoids the
+    /// <c>char -&gt; string -&gt; span -&gt; char</c> round-trip of the string overload (B12).
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static char? ToChar(char key)
+    {
+        if (key == '\0' || char.IsWhiteSpace(key))
+            return null;
+
+        var upper = char.ToUpperInvariant(key);
+        return SingleCharKeys.Contains(upper) ? upper : null;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

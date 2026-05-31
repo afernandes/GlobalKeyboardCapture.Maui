@@ -168,6 +168,33 @@ public sealed class HotkeyHandler : IKeyHandler
         _hotkeyActions[NormalizeHotkey(hotKey)] = action;
     }
 
+    /// <summary>
+    /// Removes a hotkey previously registered via the string overload.
+    /// The lookup uses the same normalization, so modifier order and aliases are
+    /// honored ("Control+Shift+X" matches a registration of "Shift+Ctrl+X").
+    /// </summary>
+    /// <returns><c>true</c> if a hotkey was removed; <c>false</c> if no match was registered.</returns>
+    public bool UnregisterHotkey(string hotKey)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(hotKey);
+        return _hotkeyActions.Remove(NormalizeHotkey(hotKey));
+    }
+
+    /// <summary>
+    /// Removes a hotkey previously registered via the <see cref="KeyEventArgs"/> overload.
+    /// </summary>
+    /// <returns><c>true</c> if a hotkey was removed; <c>false</c> if no match was registered.</returns>
+    public bool UnregisterHotkey(KeyEventArgs hotKey)
+    {
+        ArgumentNullException.ThrowIfNull(hotKey);
+        return _hotkeyActions.Remove(hotKey.ToString());
+    }
+
+    /// <summary>
+    /// Removes every registered hotkey.
+    /// </summary>
+    public void ClearHotkeys() => _hotkeyActions.Clear();
+
     public void HandleKey(KeyEventArgs key)
     {
         ArgumentNullException.ThrowIfNull(key);

@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using GlobalKeyboardCapture.Maui.Configuration;
 using GlobalKeyboardCapture.Maui.Core.Interfaces;
 using GlobalKeyboardCapture.Maui.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -13,15 +14,18 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
     private readonly HashSet<IKeyHandler> _handlers;
     private readonly IPlatformKeyHandler _platformHandler;
     private readonly ILogger<KeyHandlerService> _logger;
+    private readonly KeyHandlerOptions _options;
     private object? _boundPlatformView;
     private bool _isDisposed;
 
     public KeyHandlerService(
         IPlatformKeyHandler platformHandler,
-        ILogger<KeyHandlerService> logger)
+        ILogger<KeyHandlerService> logger,
+        KeyHandlerOptions options)
     {
         _platformHandler = platformHandler ?? throw new ArgumentNullException(nameof(platformHandler));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _options = options ?? throw new ArgumentNullException(nameof(options));
         _handlers = new HashSet<IKeyHandler>(INITIAL_HANDLERS_CAPACITY);
         _platformHandler.ConfigureHandler(HandleKeyPress);
     }
@@ -63,6 +67,7 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
             currentHandlers = _handlers.ToArray();
         }
 
+        var stopOnHandled = _options.StopOnHandled;
         foreach (var handler in currentHandlers)
         {
             try
@@ -76,6 +81,8 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
             {
                 _logger.LogError(ex, "Handler failed to process key event");
             }
+
+            if (stopOnHandled && key.Handled) break;
         }
     }
 

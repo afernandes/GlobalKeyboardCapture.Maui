@@ -27,7 +27,7 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
 
-        <CurrentVersion>1.0.4</CurrentVersion>
+        <CurrentVersion>1.1.0</CurrentVersion>
 	</PropertyGroup>
 
     <!-- Root assemblies to prevent trimming -->
@@ -60,6 +60,12 @@
 		<Description>A powerful .NET MAUI library for global keyboard capture with support for barcode scanners, hotkeys, and cross-platform input handling.</Description>
 		<Summary>Cross-platform global keyboard capture and input handling library for .NET MAUI applications, supporting hotkeys, barcode scanners, and system-wide keyboard monitoring.</Summary>
 		<PackageReleaseNotes>
+1.1.0:
+ - Feature: HotkeyHandler.UnregisterHotkey(string), UnregisterHotkey(KeyEventArgs) and ClearHotkeys() allow removing previously registered hotkeys (string overload uses the same modifier normalization as Register).
+ - Feature: KeyHandlerOptions.StopOnHandled (default false) opts the service into stopping the dispatch chain as soon as a handler sets Handled = true. Default preserves the historical fan-out behavior.
+ - Perf: AndroidKeyHandler.ProcessKeyEvent no longer allocates a string per keystroke; KeyboardHelper has a new char overload of ToChar used when KeyEvent.DisplayLabel is already a char.
+ - Breaking (DI consumers only): KeyHandlerService constructor now takes a KeyHandlerOptions parameter. The standard MauiAppBuilder.UseKeyboardHandling()/AddKeyboardHandling() wiring resolves this automatically.
+
 1.0.4:
  - Fix: AndroidKeyHandler now reports the Windows/Meta key as a modifier (WindowsKey = IsMetaPressed || KeyCode == Window), matching the Windows handler. Previously hotkeys like "Win+A" only fired on Windows.
  - Fix: AndroidKeyHandler now detects PrintScreen (Keycode.Sysrq) and PauseBreak (Keycode.Break). Previously these keys were silently ignored on Android.

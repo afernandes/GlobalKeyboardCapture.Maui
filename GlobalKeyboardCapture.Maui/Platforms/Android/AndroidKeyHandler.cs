@@ -126,12 +126,14 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ProcessKeyEvent(KeyEventArgs keyEvent, KeyEvent e)
     {
-        var displayLabel = e.DisplayLabel.ToString();
+        var displayLabel = e.DisplayLabel;
         keyEvent.Character = KeyboardHelper.ToChar(displayLabel);
 
         if (keyEvent.Character == null)
         {
-            keyEvent.FunctionKey = KeyboardHelper.ToFunction(displayLabel);
+            // Function keys still go through the string lookup — DisplayLabel for
+            // F1..F12 is typically '\0', and ToFunction matches by name only.
+            keyEvent.FunctionKey = KeyboardHelper.ToFunction(displayLabel.ToString());
         }
 
         _onKeyPressed?.Invoke(keyEvent);
