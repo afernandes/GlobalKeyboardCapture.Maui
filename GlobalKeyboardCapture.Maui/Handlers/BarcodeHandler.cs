@@ -68,8 +68,16 @@ public sealed class BarcodeHandler : IKeyHandler, IDisposable
 
     private void OnBarcodeScanned(string barcode)
     {
-        BarcodeScanned?.Invoke(this, barcode);
-        _buffer.Clear();
+        try
+        {
+            BarcodeScanned?.Invoke(this, barcode);
+        }
+        finally
+        {
+            // Always clear, even if a subscriber throws — otherwise the next scan
+            // would be concatenated to the failed one.
+            _buffer.Clear();
+        }
     }
 
     private void ThrowIfDisposed()

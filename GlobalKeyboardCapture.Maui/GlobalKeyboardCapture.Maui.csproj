@@ -27,7 +27,7 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
 
-        <CurrentVersion>1.0.3</CurrentVersion>
+        <CurrentVersion>1.1.0</CurrentVersion>
 	</PropertyGroup>
 
     <!-- Root assemblies to prevent trimming -->
@@ -60,6 +60,24 @@
 		<Description>A powerful .NET MAUI library for global keyboard capture with support for barcode scanners, hotkeys, and cross-platform input handling.</Description>
 		<Summary>Cross-platform global keyboard capture and input handling library for .NET MAUI applications, supporting hotkeys, barcode scanners, and system-wide keyboard monitoring.</Summary>
 		<PackageReleaseNotes>
+1.1.0:
+ - Feature: HotkeyHandler.UnregisterHotkey(string), UnregisterHotkey(KeyEventArgs) and ClearHotkeys() allow removing previously registered hotkeys (string overload uses the same modifier normalization as Register).
+ - Feature: KeyHandlerOptions.StopOnHandled (default false) opts the service into stopping the dispatch chain as soon as a handler sets Handled = true. Default preserves the historical fan-out behavior.
+ - Fix: AndroidKeyHandler now resolves function keys (F1-F12) from the KeyCode. Previously DisplayLabel.ToString() never matched the "F1".."F12" names, so function-key hotkeys were undetectable on Android.
+ - Fix: HotkeyHandler now serializes every access to its hotkey map under a lock, so registering/unregistering/clearing (UI thread) no longer races the dispatch lookup (platform input thread).
+ - Fix: HotkeyHandler.NormalizeHotkey canonicalizes the main key to the names KeyEventArgs.ToString() emits (e.g. "Escape"/"ESCAPE" -> "Esc", "Return" -> "Enter"), so hotkeys registered via the string API match at dispatch time. Single-key strings are canonicalized too.
+ - Fix: KeyHandlerService dispatches handlers in registration order (List instead of HashSet), making StopOnHandled deterministic.
+ - Fix: AndroidKeyHandler now reports the Windows/Meta key as a modifier (WindowsKey = IsMetaPressed || KeyCode == Window), matching the Windows handler. Previously hotkeys like "Win+A" only fired on Windows.
+ - Fix: AndroidKeyHandler now detects PrintScreen (Keycode.Sysrq) and PauseBreak (Keycode.Break). Previously these keys were silently ignored on Android.
+ - Fix: Android KeyboardHelper no longer maps Space to Character=' '. Previously the Space key produced ToString() = " +Space" on Android but "Space" on Windows, breaking cross-platform hotkey registration of "Space" / "Ctrl+Space".
+ - Fix: KeyHandlerService.HandleKeyPress now returns silently when the service is disposed instead of throwing on the platform input thread.
+ - Fix: KeyEventCallback on Android catches ObjectDisposedException from the handler and falls through to the original dispatcher, eliminating a Dispose race window.
+ - Fix: HotkeyHandler isolates exceptions thrown by user-supplied actions so a misbehaving hotkey no longer crashes the UI thread.
+ - Fix: BarcodeHandler clears the internal buffer in a finally block so a throwing BarcodeScanned subscriber does not contaminate the next scan.
+ - Perf: AndroidKeyHandler.ProcessKeyEvent no longer allocates a string per keystroke; KeyboardHelper has a new char overload of ToChar used when KeyEvent.DisplayLabel is already a char.
+ - API: KeyEventArgs.PlatformEvent is now declared object? to match its actual nullable usage.
+ - Breaking (DI consumers only): KeyHandlerService constructor now takes a KeyHandlerOptions parameter. The standard MauiAppBuilder.UseKeyboardHandling()/AddKeyboardHandling() wiring resolves this automatically.
+
 1.0.3:
  - Fix: WindowsKeyHandler.Cleanup now unsubscribes from PreviewKeyDown (previously unsubscribed from the wrong event, leaving the handler attached and leaking subscriptions on re-init).
  - Fix: HotkeyHandler.RegisterHotkey(string, bool, bool, bool, Action) now recognizes named keys (Enter, Tab, Backspace, Delete, Space, Insert, arrows, Home, End, PageUp/PageDown, CapsLock, NumLock, ScrollLock, PrintScreen, PauseBreak, Menu) and common aliases. Previously these were silently treated as the first character of the name.

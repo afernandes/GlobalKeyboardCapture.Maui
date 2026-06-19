@@ -22,9 +22,18 @@ public class KeyEventCallback : Java.Lang.Object, IWindowCallback
     {
         if (e is null)
             return false;
-        
-        var handled = _handler.DispatchKeyEvent(e);
-        if (handled) return true;
+
+        try
+        {
+            if (_handler.DispatchKeyEvent(e))
+                return true;
+        }
+        catch (ObjectDisposedException)
+        {
+            // Race between Dispose() restoring the original callback and an
+            // event already in flight. Fall through to the original dispatcher
+            // instead of crashing the input thread.
+        }
         return _original.DispatchKeyEvent(e);
     }
 

@@ -56,7 +56,24 @@ public sealed class HotkeyHandler : IKeyHandler
         ["Windows"] = "Win"
     };
 
+    // Canonical aliases for the main (non-modifier) key, mirroring the names that
+    // KeyEventArgs.ToString() emits. Only aliases whose characters differ from the
+    // canonical form need mapping (case is handled by the OrdinalIgnoreCase dictionary).
+    // Keep this in sync with KeyEventArgs.ToString() and NamedKeySetters.
+    private static readonly Dictionary<string, string> KeyAliases = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Escape"] = "Esc",
+        ["Return"] = "Enter",
+        ["Del"] = "Delete",
+        ["Ins"] = "Insert",
+        ["PgUp"] = "PageUp",
+        ["PgDn"] = "PageDown",
+        ["PrtSc"] = "PrintScreen",
+        ["Pause"] = "PauseBreak"
+    };
+
     private readonly Dictionary<string, Action> _hotkeyActions;
+    private readonly object _hotkeysLock = new();
 
     public HotkeyHandler()
     {
@@ -72,7 +89,10 @@ public sealed class HotkeyHandler : IKeyHandler
 
         // Split and trim the parts
         var parts = hotkey.Split(SEPARATOR, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length <= 1) return hotkey;
+        if (parts.Length == 0) return string.Empty;
+        // A lone key still needs canonicalization (e.g. "Escape" -> "Esc") so the
+        // string API resolves to the same slot KeyEventArgs.ToString() produces.
+        if (parts.Length == 1) return CanonicalizeKey(parts[0]);
 
         // Identify modifiers and main key
         var modifiers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -88,7 +108,7 @@ public sealed class HotkeyHandler : IKeyHandler
             }
             else
             {
-                mainKey = normalizedPart;
+                mainKey = CanonicalizeKey(normalizedPart);
             }
         }
 
@@ -99,6 +119,9 @@ public sealed class HotkeyHandler : IKeyHandler
             ? string.Join(SEPARATOR, orderedModifiers)
             : $"{string.Join(SEPARATOR, orderedModifiers)}{SEPARATOR}{mainKey}";
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static string CanonicalizeKey(string key) => KeyAliases.GetValueOrDefault(key, key);
 
     public void RegisterHotkey(string key, bool requireControl, bool requireAlt, bool requireShift, Action action)
     {
@@ -120,12 +143,14 @@ public sealed class HotkeyHandler : IKeyHandler
         RegisterHotkey(hotKey, action);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void RegisterHotkey(KeyEventArgs hotKey, Action action)
     {
         ArgumentNullException.ThrowIfNull(hotKey);
         ArgumentNullException.ThrowIfNull(action);
-        _hotkeyActions[hotKey.ToString()] = action;
+        lock (_hotkeysLock)
+        {
+            _hotkeyActions[hotKey.ToString()] = action;
+        }
     }
 
     /// <summary>
@@ -159,22 +184,82 @@ public sealed class HotkeyHandler : IKeyHandler
     /// </remarks>
     /// <exception cref="ArgumentException">Thrown when <paramref name="hotKey"/> is null or empty.</exception>
     /// <exception cref="ArgumentNullException">Thrown when <paramref name="action"/> is null.</exception>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void RegisterHotkey(string hotKey, Action action)
     {
         ArgumentException.ThrowIfNullOrEmpty(hotKey);
         ArgumentNullException.ThrowIfNull(action);
 
-        _hotkeyActions[NormalizeHotkey(hotKey)] = action;
+        lock (_hotkeysLock)
+        {
+            _hotkeyActions[NormalizeHotkey(hotKey)] = action;
+        }
+    }
+
+    /// <summary>
+    /// Removes a hotkey previously registered via the string overload.
+    /// The lookup uses the same normalization, so modifier order and aliases are
+    /// honored ("Control+Shift+X" matches a registration of "Shift+Ctrl+X").
+    /// </summary>
+    /// <returns><c>true</c> if a hotkey was removed; <c>false</c> if no match was registered.</returns>
+    public bool UnregisterHotkey(string hotKey)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(hotKey);
+        lock (_hotkeysLock)
+        {
+            return _hotkeyActions.Remove(NormalizeHotkey(hotKey));
+        }
+    }
+
+    /// <summary>
+    /// Removes a hotkey previously registered via the <see cref="KeyEventArgs"/> overload.
+    /// </summary>
+    /// <returns><c>true</c> if a hotkey was removed; <c>false</c> if no match was registered.</returns>
+    public bool UnregisterHotkey(KeyEventArgs hotKey)
+    {
+        ArgumentNullException.ThrowIfNull(hotKey);
+        lock (_hotkeysLock)
+        {
+            return _hotkeyActions.Remove(hotKey.ToString());
+        }
+    }
+
+    /// <summary>
+    /// Removes every registered hotkey.
+    /// </summary>
+    public void ClearHotkeys()
+    {
+        lock (_hotkeysLock)
+        {
+            _hotkeyActions.Clear();
+        }
     }
 
     public void HandleKey(KeyEventArgs key)
     {
         ArgumentNullException.ThrowIfNull(key);
 
-        if (_hotkeyActions.TryGetValue(key.ToString(), out var action))
+        Action? action;
+        lock (_hotkeysLock)
         {
-            MainThread.BeginInvokeOnMainThread(action);
+            _hotkeyActions.TryGetValue(key.ToString(), out action);
+        }
+
+        if (action is not null)
+        {
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                try
+                {
+                    action();
+                }
+                catch (Exception ex)
+                {
+                    // Hotkey actions are user code; isolate exceptions so a misbehaving
+                    // handler does not crash the UI thread. Service ILogger is not
+                    // reachable from here, so trace and continue.
+                    System.Diagnostics.Debug.WriteLine($"[GlobalKeyboardCapture] Hotkey action threw: {ex}");
+                }
+            });
             key.Handled = true;
         }
     }

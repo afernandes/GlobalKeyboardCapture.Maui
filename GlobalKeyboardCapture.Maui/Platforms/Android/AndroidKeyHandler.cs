@@ -91,7 +91,7 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
             ControlKey = e.IsCtrlPressed,
             AltKey = e.IsAltPressed,
             ShiftKey = e.IsShiftPressed,
-            WindowsKey = e.KeyCode == Keycode.Window,
+            WindowsKey = e.IsMetaPressed || e.KeyCode == Keycode.Window,
 
             // Navigation
             UpKey = e.KeyCode == Keycode.DpadUp,
@@ -116,6 +116,8 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
             CapsLockKey = e.KeyCode == Keycode.CapsLock,
             NumLockKey = e.KeyCode == Keycode.NumLock,
             ScrollLockKey = e.KeyCode == Keycode.ScrollLock,
+            PrintScreenKey = e.KeyCode == Keycode.Sysrq,
+            PauseBreakKey = e.KeyCode == Keycode.Break,
             MenuKey = e.KeyCode == Keycode.Menu,
             PlatformEvent = e
         };
@@ -124,12 +126,31 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ProcessKeyEvent(KeyEventArgs keyEvent, KeyEvent e)
     {
-        var displayLabel = e.DisplayLabel.ToString();
+        var displayLabel = e.DisplayLabel;
         keyEvent.Character = KeyboardHelper.ToChar(displayLabel);
 
         if (keyEvent.Character == null)
         {
-            keyEvent.FunctionKey = KeyboardHelper.ToFunction(displayLabel);
+            // DisplayLabel is '\0' for F1..F12, so the name-based ToFunction lookup
+            // never matches. Resolve function keys from the KeyCode instead, mapping
+            // to the same "F1".."F12" strings KeyEventArgs.ToString() expects. Literal
+            // mapping (not KeyCode.ToString()) keeps this trim/AOT-safe.
+            keyEvent.FunctionKey = e.KeyCode switch
+            {
+                Keycode.F1 => "F1",
+                Keycode.F2 => "F2",
+                Keycode.F3 => "F3",
+                Keycode.F4 => "F4",
+                Keycode.F5 => "F5",
+                Keycode.F6 => "F6",
+                Keycode.F7 => "F7",
+                Keycode.F8 => "F8",
+                Keycode.F9 => "F9",
+                Keycode.F10 => "F10",
+                Keycode.F11 => "F11",
+                Keycode.F12 => "F12",
+                _ => null
+            };
         }
 
         _onKeyPressed?.Invoke(keyEvent);

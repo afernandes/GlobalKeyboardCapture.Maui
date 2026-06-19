@@ -4,17 +4,16 @@ namespace GlobalKeyboardCapture.Maui.Platforms.Android;
 
 internal static class KeyboardHelper
 {
-    private static readonly HashSet<string> FKeys = new(["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12"], StringComparer.OrdinalIgnoreCase);
     private static readonly HashSet<char> SingleCharKeys;
     private static readonly Dictionary<string, char> KeyMap;
 
     static KeyboardHelper()
     {
-        // Initialize HashSet of unique characters (for quick checks)
-        SingleCharKeys = new HashSet<char>()
-            {
-                ' ' // Space
-            };
+        // Space is intentionally excluded from both maps below: AndroidKeyHandler
+        // sets SpaceKey=true for Keycode.Space, and mapping ' ' here would also set
+        // Character=' ', producing a ToString() of " +Space" instead of the
+        // cross-platform expected "Space" (Windows leaves Character=null for Space).
+        SingleCharKeys = new HashSet<char>();
 
         // Add letters (A-Z)
         for (char c = 'A'; c <= 'Z'; c++)
@@ -26,9 +25,6 @@ internal static class KeyboardHelper
 
         // Initialize dictionary with adequate initial capacity
         KeyMap = new Dictionary<string, char>(100, StringComparer.OrdinalIgnoreCase);
-
-        // Map space
-        KeyMap["SPACE"] = ' ';
 
         // Map numbers and their variations
         for (char n = '0'; n <= '9'; n++)
@@ -50,6 +46,9 @@ internal static class KeyboardHelper
         foreach (var (symbol, variants) in mathOperators)
         {
             KeyMap[symbol] = symbol[0];
+            // Also accept the bare char in SingleCharKeys so ToChar(char) can short-circuit
+            // without allocating a string for a dictionary lookup (B12).
+            SingleCharKeys.Add(symbol[0]);
             foreach (var variant in variants)
                 KeyMap[variant] = symbol[0];
         }
@@ -92,11 +91,9 @@ internal static class KeyboardHelper
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static string? ToFunction(string key)
-    {
-        return FKeys.Contains(key) ? key : null;
-    }
+    // Note: function keys (F1-F12) are resolved in AndroidKeyHandler directly from the
+    // Keycode; Android's KeyEvent.DisplayLabel is '\0' for them, so there is no
+    // name-based ToFunction here (unlike the Windows KeyboardHelper, which maps VirtualKey).
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static char? ToChar(string? key)
@@ -105,6 +102,21 @@ internal static class KeyboardHelper
             return null;
 
         return ProcessKey(key.AsSpan());
+    }
+
+    /// <summary>
+    /// Allocation-free overload used on the hot path from <c>AndroidKeyHandler.ProcessKeyEvent</c>,
+    /// where <c>KeyEvent.DisplayLabel</c> is already a <see cref="char"/>. Avoids the
+    /// <c>char -&gt; string -&gt; span -&gt; char</c> round-trip of the string overload (B12).
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static char? ToChar(char key)
+    {
+        if (key == '\0' || char.IsWhiteSpace(key))
+            return null;
+
+        var upper = char.ToUpperInvariant(key);
+        return SingleCharKeys.Contains(upper) ? upper : null;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

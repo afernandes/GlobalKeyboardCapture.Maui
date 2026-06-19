@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using GlobalKeyboardCapture.Maui.Configuration;
 using GlobalKeyboardCapture.Maui.Core.Interfaces;
 using GlobalKeyboardCapture.Maui.Core.Models;
 using Microsoft.Extensions.Logging;
@@ -10,19 +11,24 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
     private const int INITIAL_HANDLERS_CAPACITY = 8;
 
     private readonly object _lockObject = new();
-    private readonly HashSet<IKeyHandler> _handlers;
+    // List (not HashSet) so dispatch honors registration order — required for
+    // StopOnHandled, which makes handler order observable.
+    private readonly List<IKeyHandler> _handlers;
     private readonly IPlatformKeyHandler _platformHandler;
     private readonly ILogger<KeyHandlerService> _logger;
+    private readonly KeyHandlerOptions _options;
     private object? _boundPlatformView;
     private bool _isDisposed;
 
     public KeyHandlerService(
         IPlatformKeyHandler platformHandler,
-        ILogger<KeyHandlerService> logger)
+        ILogger<KeyHandlerService> logger,
+        KeyHandlerOptions options)
     {
         _platformHandler = platformHandler ?? throw new ArgumentNullException(nameof(platformHandler));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        _handlers = new HashSet<IKeyHandler>(INITIAL_HANDLERS_CAPACITY);
+        _options = options ?? throw new ArgumentNullException(nameof(options));
+        _handlers = new List<IKeyHandler>(INITIAL_HANDLERS_CAPACITY);
         _platformHandler.ConfigureHandler(HandleKeyPress);
     }
 
@@ -56,10 +62,14 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         IKeyHandler[] currentHandlers;
         lock (_lockObject)
         {
-            ThrowIfDisposed();
+            // Silent early-return: this runs on the platform input thread and may be
+            // invoked for events already in flight after Dispose. Throwing here would
+            // crash the platform input pipeline.
+            if (_isDisposed) return;
             currentHandlers = _handlers.ToArray();
         }
 
+        var stopOnHandled = _options.StopOnHandled;
         foreach (var handler in currentHandlers)
         {
             try
@@ -73,6 +83,8 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
             {
                 _logger.LogError(ex, "Handler failed to process key event");
             }
+
+            if (stopOnHandled && key.Handled) break;
         }
     }
 
@@ -83,7 +95,8 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         lock (_lockObject)
         {
             ThrowIfDisposed();
-            _handlers.Add(handler);
+            if (!_handlers.Contains(handler))
+                _handlers.Add(handler);
         }
     }
 

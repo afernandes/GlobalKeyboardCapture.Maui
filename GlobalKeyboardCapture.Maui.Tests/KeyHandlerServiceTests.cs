@@ -1,3 +1,4 @@
+using GlobalKeyboardCapture.Maui.Configuration;
 using GlobalKeyboardCapture.Maui.Core.Models;
 using GlobalKeyboardCapture.Maui.Core.Services;
 using GlobalKeyboardCapture.Maui.Tests.TestDoubles;
@@ -7,11 +8,12 @@ namespace GlobalKeyboardCapture.Maui.Tests;
 
 public class KeyHandlerServiceTests
 {
-    private static (KeyHandlerService svc, FakePlatformKeyHandler platform) Build()
+    private static (KeyHandlerService svc, FakePlatformKeyHandler platform) Build(
+        KeyHandlerOptions? options = null)
     {
         var platform = new FakePlatformKeyHandler();
         var logger = NullLogger<KeyHandlerService>.Instance;
-        return (new KeyHandlerService(platform, logger), platform);
+        return (new KeyHandlerService(platform, logger, options ?? new KeyHandlerOptions()), platform);
     }
 
     [Fact]
