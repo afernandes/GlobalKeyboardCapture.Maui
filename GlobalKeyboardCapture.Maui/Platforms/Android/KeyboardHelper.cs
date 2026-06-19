@@ -4,7 +4,6 @@ namespace GlobalKeyboardCapture.Maui.Platforms.Android;
 
 internal static class KeyboardHelper
 {
-    private static readonly HashSet<string> FKeys = new(["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12"], StringComparer.OrdinalIgnoreCase);
     private static readonly HashSet<char> SingleCharKeys;
     private static readonly Dictionary<string, char> KeyMap;
 
@@ -92,11 +91,9 @@ internal static class KeyboardHelper
         }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static string? ToFunction(string key)
-    {
-        return FKeys.Contains(key) ? key : null;
-    }
+    // Note: function keys (F1-F12) are resolved in AndroidKeyHandler directly from the
+    // Keycode; Android's KeyEvent.DisplayLabel is '\0' for them, so there is no
+    // name-based ToFunction here (unlike the Windows KeyboardHelper, which maps VirtualKey).
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static char? ToChar(string? key)

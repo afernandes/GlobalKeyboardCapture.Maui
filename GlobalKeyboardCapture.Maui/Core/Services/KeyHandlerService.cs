@@ -11,7 +11,9 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
     private const int INITIAL_HANDLERS_CAPACITY = 8;
 
     private readonly object _lockObject = new();
-    private readonly HashSet<IKeyHandler> _handlers;
+    // List (not HashSet) so dispatch honors registration order — required for
+    // StopOnHandled, which makes handler order observable.
+    private readonly List<IKeyHandler> _handlers;
     private readonly IPlatformKeyHandler _platformHandler;
     private readonly ILogger<KeyHandlerService> _logger;
     private readonly KeyHandlerOptions _options;
@@ -26,7 +28,7 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         _platformHandler = platformHandler ?? throw new ArgumentNullException(nameof(platformHandler));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _options = options ?? throw new ArgumentNullException(nameof(options));
-        _handlers = new HashSet<IKeyHandler>(INITIAL_HANDLERS_CAPACITY);
+        _handlers = new List<IKeyHandler>(INITIAL_HANDLERS_CAPACITY);
         _platformHandler.ConfigureHandler(HandleKeyPress);
     }
 
@@ -93,7 +95,8 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         lock (_lockObject)
         {
             ThrowIfDisposed();
-            _handlers.Add(handler);
+            if (!_handlers.Contains(handler))
+                _handlers.Add(handler);
         }
     }
 

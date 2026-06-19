@@ -131,9 +131,26 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
 
         if (keyEvent.Character == null)
         {
-            // Function keys still go through the string lookup — DisplayLabel for
-            // F1..F12 is typically '\0', and ToFunction matches by name only.
-            keyEvent.FunctionKey = KeyboardHelper.ToFunction(displayLabel.ToString());
+            // DisplayLabel is '\0' for F1..F12, so the name-based ToFunction lookup
+            // never matches. Resolve function keys from the KeyCode instead, mapping
+            // to the same "F1".."F12" strings KeyEventArgs.ToString() expects. Literal
+            // mapping (not KeyCode.ToString()) keeps this trim/AOT-safe.
+            keyEvent.FunctionKey = e.KeyCode switch
+            {
+                Keycode.F1 => "F1",
+                Keycode.F2 => "F2",
+                Keycode.F3 => "F3",
+                Keycode.F4 => "F4",
+                Keycode.F5 => "F5",
+                Keycode.F6 => "F6",
+                Keycode.F7 => "F7",
+                Keycode.F8 => "F8",
+                Keycode.F9 => "F9",
+                Keycode.F10 => "F10",
+                Keycode.F11 => "F11",
+                Keycode.F12 => "F12",
+                _ => null
+            };
         }
 
         _onKeyPressed?.Invoke(keyEvent);
