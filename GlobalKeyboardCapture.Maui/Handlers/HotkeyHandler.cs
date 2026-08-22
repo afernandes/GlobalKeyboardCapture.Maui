@@ -108,6 +108,8 @@ public sealed class HotkeyHandler : IKeyHandler
             }
             else
             {
+                if (!string.IsNullOrEmpty(mainKey))
+                    throw new ArgumentException("A hotkey must contain exactly one main key.", nameof(hotkey));
                 mainKey = CanonicalizeKey(normalizedPart);
             }
         }
@@ -121,7 +123,13 @@ public sealed class HotkeyHandler : IKeyHandler
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static string CanonicalizeKey(string key) => KeyAliases.GetValueOrDefault(key, key);
+    private static string CanonicalizeKey(string key)
+    {
+        if (key.Length > 1 && (key[0] == 'F' || key[0] == 'f') && !TryParseFunctionKey(key, out _))
+            throw new ArgumentException($"Invalid function key '{key}'. Supported values are F1 through F24.", nameof(key));
+
+        return KeyAliases.GetValueOrDefault(key, key);
+    }
 
     public void RegisterHotkey(string key, bool requireControl, bool requireAlt, bool requireShift, Action action)
     {
@@ -137,6 +145,12 @@ public sealed class HotkeyHandler : IKeyHandler
 
         if (!TryProcessSpecialKey(key, hotKey))
         {
+            // Fail loud on unrecognized multi-char input instead of silently taking the
+            // first character (e.g. "Enterr" would otherwise register under 'E').
+            if (key.Length != 1)
+                throw new ArgumentException(
+                    $"Unrecognized hotkey key '{key}'. Use a single character, a function key (F1-F12), Esc, or a known named key (Enter, Tab, Space, arrows, etc.).",
+                    nameof(key));
             hotKey.Character = key[0];
         }
 
@@ -289,12 +303,21 @@ public sealed class HotkeyHandler : IKeyHandler
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsFunctionKey(ReadOnlySpan<char> key, KeyEventArgs hotKey)
     {
-        if (key.Length >= 2 && (key[0] == 'F' || key[0] == 'f') && char.IsNumber(key[1]))
+        if (TryParseFunctionKey(key, out var functionNumber))
         {
-            hotKey.FunctionKey = key.ToString();
+            hotKey.FunctionKey = $"F{functionNumber}";
             return true;
         }
         return false;
+    }
+
+    private static bool TryParseFunctionKey(ReadOnlySpan<char> key, out int functionNumber)
+    {
+        functionNumber = 0;
+        return key.Length is 2 or 3
+            && (key[0] == 'F' || key[0] == 'f')
+            && int.TryParse(key[1..], out functionNumber)
+            && functionNumber is >= 1 and <= 24;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

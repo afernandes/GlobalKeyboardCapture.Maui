@@ -1,22 +1,13 @@
-Clear-Host
-Write-Host "Deleting all BIN and OBJ folders..." -ForegroundColor Cyan
-Get-ChildItem -Path . -Include bin,obj -Recurse -Directory | ForEach-Object {
-    if ($_.FullName -notmatch "\\node_modules\\") {
+# Wipes every bin/, obj/ and .vs/ folder under the repo root (the script's own folder),
+# regardless of the current working directory. Use when stale build artifacts cause
+# weird MAUI/Android errors.
+Write-Host "Deleting all bin, obj and .vs folders under $PSScriptRoot ..." -ForegroundColor Cyan
+
+Get-ChildItem -Path $PSScriptRoot -Recurse -Directory -Force -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -in 'bin', 'obj', '.vs' -and $_.FullName -notmatch '\\node_modules\\' } |
+    ForEach-Object {
         Write-Host "Deleting:" $_.FullName -ForegroundColor Yellow
-        Remove-Item $_.FullName -Recurse -Force
-    } else {
-        Write-Host "Skipping:" $_.FullName -ForegroundColor Magenta
+        Remove-Item $_.FullName -Recurse -Force -ErrorAction SilentlyContinue
     }
-}
 
-Get-ChildItem -Path . -Include ".vs" -Recurse -Directory -Hidden | ForEach-Object {
-    if ($_.FullName -notmatch "\\node_modules\\") {
-        Write-Host "Deleting:" $_.FullName -ForegroundColor Yellow
-        Remove-Item $_.FullName -Recurse -Force
-    } else {
-        Write-Host "Skipping:" $_.FullName -ForegroundColor Magenta
-    }
-}
-
-Write-Host "BIN and OBJ folders have been successfully deleted." -ForegroundColor Green
-
+Write-Host "Done." -ForegroundColor Green

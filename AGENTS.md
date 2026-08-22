@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
 ## Repository Layout
 
@@ -85,4 +85,4 @@ Implement `Core/Interfaces/IKeyHandler.cs` (`ShouldHandle` + `HandleKey`), regis
 
 ## Git Workflow
 
-Active development branch for this work: `claude/add-claude-documentation-RsaYl`. Push with `git push -u origin <branch>`. Do not push to `main`/`master` and do not open a PR unless explicitly asked.
+Use a `codex/` feature branch for changes. Push with `git push -u origin <branch>`. Do not push to `main`/`master` and do not open a PR unless explicitly asked.

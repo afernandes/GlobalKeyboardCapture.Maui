@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -12,8 +12,8 @@
   </PropertyGroup>
 
   <!--
-    The library multi-targets only MAUI platform TFMs (net{8,9}.0-android / -windows10...).
-    A plain net9.0 test project cannot ProjectReference a MAUI lib directly, so we
+    The library multi-targets only MAUI platform TFMs (net8.0-android / -windows10...).
+    A plain net8.0 test project cannot ProjectReference a MAUI lib directly, so we
     link the platform-agnostic source files and provide a tiny MainThread shim. This
     keeps tests fast and runnable on any OS while still exercising the real production
     code path for the logic under test.

@@ -17,6 +17,7 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
     private Action<KeyEventArgs>? _onKeyPressed;
     private Activity? _activity;
     private IWindowCallback? _originalDispatcher;
+    private KeyEventCallback? _installedCallback;
     private bool _isDisposed;
 
     public void ConfigureHandler(Action<Core.Models.KeyEventArgs> onKeyPressed)
@@ -31,7 +32,22 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
         ArgumentNullException.ThrowIfNull(e);
         ThrowIfDisposed();
 
-        if (e.Action != KEY_ACTION_DOWN || e.Flags != KEY_FLAGS_FROM_SYSTEM)
+        // Trusted system key-downs only. Use a BIT TEST instead of "Flags == FromSystem":
+        // Flags is a bitfield and some keyboards set extra flags on function/numpad keys,
+        // so exact equality silently dropped F1-F12 and the numpad Enter. Fallback events
+        // are skipped to avoid double-processing (e.g. numpad keys with NumLock off, which
+        // the system re-emits as DPAD/Move keys).
+        if (e.Action != KEY_ACTION_DOWN)
+            return false;
+        if ((e.Flags & KEY_FLAGS_FROM_SYSTEM) != KEY_FLAGS_FROM_SYSTEM)
+            return false;
+        if ((e.Flags & KeyEventFlags.Fallback) == KeyEventFlags.Fallback)
+            return false;
+        // Ignore auto-repeat from a held key: Android streams ACTION_DOWN with an
+        // incrementing RepeatCount, which would otherwise re-fire a held hotkey dozens
+        // of times per second and flood the barcode buffer. Distinct keystrokes (and
+        // barcode-scanner output) arrive as RepeatCount == 0, so this only drops repeats.
+        if (e.RepeatCount > 0)
             return false;
 
         var keyEvent = CreateKeyEventArgs(e);
@@ -63,7 +79,8 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
 
             _activity = currentActivity;
             _originalDispatcher = _activity.Window.Callback;
-            _activity.Window.Callback = new KeyEventCallback(this, _activity.Window.Callback!);
+            _installedCallback = new KeyEventCallback(this, _activity.Window.Callback!);
+            _activity.Window.Callback = _installedCallback;
         }
     }
 
@@ -75,6 +92,12 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
         }
         _originalDispatcher = null;
         _activity = null;
+
+        // Dispose the Java proxy we installed so it doesn't pin the previous activity
+        // (with its handler/original-callback references) across recreation. The original
+        // dispatcher is restored above first, so the window no longer points at the proxy.
+        _installedCallback?.Dispose();
+        _installedCallback = null;
     }
 
     public void Cleanup()
@@ -104,7 +127,7 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
             PageDownKey = e.KeyCode == Keycode.PageDown,
 
             // Edition
-            EnterKey = e.KeyCode == Keycode.Enter,
+            EnterKey = e.KeyCode == Keycode.Enter || e.KeyCode == Keycode.NumpadEnter,
             TabKey = e.KeyCode == Keycode.Tab,
             BackspaceKey = e.KeyCode == Keycode.Del,
             DeleteKey = e.KeyCode == Keycode.ForwardDel,
@@ -126,31 +149,30 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ProcessKeyEvent(KeyEventArgs keyEvent, KeyEvent e)
     {
-        var displayLabel = e.DisplayLabel;
-        keyEvent.Character = KeyboardHelper.ToChar(displayLabel);
-
-        if (keyEvent.Character == null)
+        // Resolve function keys from the KeyCode FIRST. DisplayLabel is unreliable for
+        // them (usually '\0', occasionally a stray char), so testing ToChar first could
+        // misclassify F1..F12 as a character. Literal mapping keeps this trim/AOT-safe and
+        // produces the same "F1".."F12" strings KeyEventArgs.ToString() expects.
+        keyEvent.FunctionKey = e.KeyCode switch
         {
-            // DisplayLabel is '\0' for F1..F12, so the name-based ToFunction lookup
-            // never matches. Resolve function keys from the KeyCode instead, mapping
-            // to the same "F1".."F12" strings KeyEventArgs.ToString() expects. Literal
-            // mapping (not KeyCode.ToString()) keeps this trim/AOT-safe.
-            keyEvent.FunctionKey = e.KeyCode switch
-            {
-                Keycode.F1 => "F1",
-                Keycode.F2 => "F2",
-                Keycode.F3 => "F3",
-                Keycode.F4 => "F4",
-                Keycode.F5 => "F5",
-                Keycode.F6 => "F6",
-                Keycode.F7 => "F7",
-                Keycode.F8 => "F8",
-                Keycode.F9 => "F9",
-                Keycode.F10 => "F10",
-                Keycode.F11 => "F11",
-                Keycode.F12 => "F12",
-                _ => null
-            };
+            Keycode.F1 => "F1",
+            Keycode.F2 => "F2",
+            Keycode.F3 => "F3",
+            Keycode.F4 => "F4",
+            Keycode.F5 => "F5",
+            Keycode.F6 => "F6",
+            Keycode.F7 => "F7",
+            Keycode.F8 => "F8",
+            Keycode.F9 => "F9",
+            Keycode.F10 => "F10",
+            Keycode.F11 => "F11",
+            Keycode.F12 => "F12",
+            _ => null
+        };
+
+        if (keyEvent.FunctionKey == null)
+        {
+            keyEvent.Character = KeyboardHelper.ToChar(e.DisplayLabel);
         }
 
         _onKeyPressed?.Invoke(keyEvent);

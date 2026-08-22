@@ -55,10 +55,15 @@ public class KeyEventCallback : Java.Lang.Object, IWindowCallback
     public void OnPanelClosed(int featureId, IMenu menu) => _original.OnPanelClosed(featureId, menu);
     public bool OnPreparePanel(int featureId, View? view, IMenu menu) => _original.OnPreparePanel(featureId, view, menu) ;
     public bool OnSearchRequested() => _original.OnSearchRequested() ;
-    public bool OnSearchRequested(SearchEvent? searchEvent) => _original.OnSearchRequested(searchEvent) ;
+    public bool OnSearchRequested(SearchEvent? searchEvent) => OperatingSystem.IsAndroidVersionAtLeast(23)
+        ? _original.OnSearchRequested(searchEvent)
+        : _original.OnSearchRequested();
     public void OnWindowAttributesChanged(WindowManagerLayoutParams? attrs) => _original.OnWindowAttributesChanged(attrs);
     public void OnWindowFocusChanged(bool hasFocus) => _original.OnWindowFocusChanged(hasFocus);
-    public ActionMode? OnWindowStartingActionMode(ActionMode.ICallback? callback, ActionModeType type) => _original.OnWindowStartingActionMode(callback, type);
+    public ActionMode? OnWindowStartingActionMode(ActionMode.ICallback? callback, ActionModeType type) =>
+        OperatingSystem.IsAndroidVersionAtLeast(23)
+            ? _original.OnWindowStartingActionMode(callback, type)
+            : _original.OnWindowStartingActionMode(callback);
     public ActionMode? OnWindowStartingActionMode(ActionMode.ICallback? callback) => _original.OnWindowStartingActionMode(callback);
     #endregion
 }

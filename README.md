@@ -1,12 +1,12 @@
 # GlobalKeyboardCapture.Maui
 
-A powerful .NET MAUI library for global keyboard capture with strong support for barcode scanners. Provides system-wide key interception, hotkeys management.
+A .NET MAUI library for application-wide keyboard capture with strong support for keyboard-wedge barcode scanners and hotkey management. Events are captured while one of the app's windows is active; operating-system-wide hotkeys are a separate, Windows-specific capability.
 
 [![NuGet](https://img.shields.io/nuget/v/GlobalKeyboardCapture.Maui.svg)](https://www.nuget.org/packages/GlobalKeyboardCapture.Maui/)
 [![NuGet](https://img.shields.io/nuget/dt/GlobalKeyboardCapture.Maui.svg?label=Nuget&maxAge=60)](https://www.nuget.org/packages/GlobalKeyboardCapture.Maui/)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg?maxAge=60)](https://raw.githubusercontent.com/afernandes/GlobalKeyboardCapture.Maui/master/LICENSE)
 [![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fafernandes%2FGlobalKeyboardCapture.Maui.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fafernandes%2FGlobalKeyboardCapture.Maui?ref=badge_shield)
-[![.NET Support](https://img.shields.io/badge/.NET-8.0%20|%209.0-512BD4)](https://dotnet.microsoft.com/)
+[![.NET Support](https://img.shields.io/badge/.NET-8.0-512BD4)](https://dotnet.microsoft.com/)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=afernandes_GlobalKeyboardCapture.Maui&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=afernandes_GlobalKeyboardCapture.Maui)
 
 ![GlobalKeyboardCapture.Maui Demo](https://raw.githubusercontent.com/afernandes/Maui.GlobalKeyboardCapture/refs/heads/main/Print.png)
@@ -15,7 +15,7 @@ A powerful .NET MAUI library for global keyboard capture with strong support for
 
 ## Features
 
-- 🔑 Global keyboard capture
+- 🔑 Application-wide keyboard capture
 - 📊 Advanced keyboard input processing
 - 🏷️ Built-in barcode scanner support
 - ⌨️ Customizable hotkeys system
@@ -27,15 +27,15 @@ A powerful .NET MAUI library for global keyboard capture with strong support for
 ## Common Use Cases
 
 - Barcode scanner integration
-- Global hotkeys and shortcuts
-- System-wide keyboard monitoring
+- App-wide hotkeys and shortcuts
+- Keyboard monitoring inside the active application window
 - Custom keyboard input handling
 - Input automation
 - Multi-mode keyboard capture
 
 ## Full key support:
 - Standard keys (A-Z, 0-9)
-- Function keys (F1-F24)
+- Function keys (F1-F24 on Windows, F1-F12 on Android)
 - Modifier keys (Ctrl, Alt, Shift)
 - Windows OEM keys (;, /, [, ], etc)
 - Android special keys (Volume, Back, Menu)
@@ -71,6 +71,11 @@ public static MauiApp CreateMauiApp()
         // Barcode specific settings
         options.BarcodeTimeout = 150;
         options.MinBarcodeLength = 8;
+        options.MaxBarcodeLength = 4096;  // upper bound on the scan buffer (anti-runaway)
+
+        // When true, stops invoking later handlers once one sets KeyEventArgs.Handled.
+        // Default is false (every registered handler sees every key).
+        options.StopOnHandled = false;
     });
 
     return builder.Build();
@@ -133,11 +138,15 @@ Create your own key handler for specific needs:
 ```csharp
 public class CustomKeyHandler : IKeyHandler
 {
-    public bool ShouldHandle(string key) => true;
+    public bool ShouldHandle(KeyEventArgs key) => true;
 
-    public void HandleKey(string key)
+    public void HandleKey(KeyEventArgs key)
     {
-        // Your custom key handling logic
+        // key.ToString() yields the normalized combo, e.g. "Ctrl+S", "F2", "Enter".
+        var combo = key.ToString();
+
+        // Your custom key handling logic.
+        // Set key.Handled = true to stop the key from propagating further.
     }
 }
 ```
@@ -175,6 +184,14 @@ The hotkey system provides:
 - Consistent behavior regardless of registration order
 - High-performance implementation with minimal allocations
 
+Registered hotkeys can be removed individually or all at once:
+
+```csharp
+_hotkeyHandler.UnregisterHotkey("Ctrl+Alt+Shift+P"); // by string (same normalization)
+_hotkeyHandler.UnregisterHotkey(comboKeyEventArgs);  // by KeyEventArgs
+_hotkeyHandler.ClearHotkeys();                        // remove every registered hotkey
+```
+
 ### Barcode Scanner Mode
 
 ```csharp
@@ -196,10 +213,10 @@ The library is optimized for performance and efficiency:
 
 ## Key Features
 
-### Global Key Capture
+### Application-wide Key Capture
 - Capture keyboard input regardless of focus
 - Works with all UI controls
-- System-wide key interception
+- Key interception inside the active application window
 
 ### Input Processing
 - Configurable input timeout

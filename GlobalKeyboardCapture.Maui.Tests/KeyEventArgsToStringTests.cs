@@ -76,4 +76,63 @@ public class KeyEventArgsToStringTests
         new KeyEventArgs { Character = 'a' }.NoSpecialKeysPressed.Should().BeTrue();
         new KeyEventArgs { ControlKey = true }.NoSpecialKeysPressed.Should().BeFalse();
     }
+
+    // Golden-string guards: ToString() is the hotkey lookup contract, so any change to
+    // these exact tokens is a breaking change for registered hotkeys (per CLAUDE.md).
+    [Fact]
+    public void SoloModifierTokens()
+    {
+        new KeyEventArgs { ControlKey = true }.ToString().Should().Be("Ctrl");
+        new KeyEventArgs { AltKey = true }.ToString().Should().Be("Alt");
+        new KeyEventArgs { ShiftKey = true }.ToString().Should().Be("Shift");
+        new KeyEventArgs { WindowsKey = true }.ToString().Should().Be("Win");
+    }
+
+    [Theory]
+    [InlineData("Tab")]
+    [InlineData("Backspace")]
+    [InlineData("Delete")]
+    [InlineData("Space")]
+    [InlineData("Insert")]
+    [InlineData("Up")]
+    [InlineData("Down")]
+    [InlineData("Left")]
+    [InlineData("Right")]
+    [InlineData("Home")]
+    [InlineData("End")]
+    [InlineData("PageUp")]
+    [InlineData("PageDown")]
+    [InlineData("CapsLock")]
+    [InlineData("NumLock")]
+    [InlineData("ScrollLock")]
+    [InlineData("PrintScreen")]
+    [InlineData("PauseBreak")]
+    [InlineData("Menu")]
+    public void SpecialKeyTokens(string token)
+    {
+        var key = new KeyEventArgs();
+        switch (token)
+        {
+            case "Tab": key.TabKey = true; break;
+            case "Backspace": key.BackspaceKey = true; break;
+            case "Delete": key.DeleteKey = true; break;
+            case "Space": key.SpaceKey = true; break;
+            case "Insert": key.InsertKey = true; break;
+            case "Up": key.UpKey = true; break;
+            case "Down": key.DownKey = true; break;
+            case "Left": key.LeftKey = true; break;
+            case "Right": key.RightKey = true; break;
+            case "Home": key.HomeKey = true; break;
+            case "End": key.EndKey = true; break;
+            case "PageUp": key.PageUpKey = true; break;
+            case "PageDown": key.PageDownKey = true; break;
+            case "CapsLock": key.CapsLockKey = true; break;
+            case "NumLock": key.NumLockKey = true; break;
+            case "ScrollLock": key.ScrollLockKey = true; break;
+            case "PrintScreen": key.PrintScreenKey = true; break;
+            case "PauseBreak": key.PauseBreakKey = true; break;
+            case "Menu": key.MenuKey = true; break;
+        }
+        key.ToString().Should().Be(token);
+    }
 }

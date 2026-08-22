@@ -1,9 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net8.0-android;net9.0-android</TargetFrameworks>
-		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net8.0-windows10.0.19041.0;net9.0-windows10.0.19041.0</TargetFrameworks>
+		<TargetFrameworks>net8.0-android</TargetFrameworks>
+		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net8.0-windows10.0.19041.0</TargetFrameworks>
+		<!-- net8.0 workloads are flagged EOL by newer .NET SDKs; silence NETSDK1202 -->
+		<CheckEolWorkloads>false</CheckEolWorkloads>
 		<UseMaui>true</UseMaui>
+		<!-- Fallback when the active MAUI workload doesn't supply MauiVersion (e.g. an SDK
+		     band that doesn't target net8.0); resolves NU1015 on Microsoft.Maui.Controls. -->
+		<MauiVersion Condition="'$(MauiVersion)' == ''">8.0.100</MauiVersion>
 		<SingleProject>true</SingleProject>
 		<LangVersion>latest</LangVersion>
 		<ImplicitUsings>enable</ImplicitUsings>
@@ -13,13 +18,7 @@
         <IsAotCompatible>true</IsAotCompatible>
         <IsTrimmable>true</IsTrimmable>
         <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
-        <TrimmerDefaultAction>copyused</TrimmerDefaultAction>
-        <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
-
-        <!-- Prevent Trimming -->
-        <PreserveCollectionGenericArguments>true</PreserveCollectionGenericArguments>
         <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
-        <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
         <DisableTrimAnalyzer>false</DisableTrimAnalyzer>
         <OptimizationPreference>size</OptimizationPreference>
         
@@ -29,13 +28,6 @@
 
         <CurrentVersion>1.1.0</CurrentVersion>
 	</PropertyGroup>
-
-    <!-- Root assemblies to prevent trimming -->
-    <ItemGroup>
-        <TrimmerRootAssembly Include="$(AssemblyName)" />
-        <TrimmerRootAssembly Include="GlobalKeyboardCapture.Maui" />
-        <TrimmerRootDescriptor Include="trim.xml" />
-    </ItemGroup>
 
     <ItemGroup>
         <InternalsVisibleTo Include="GlobalKeyboardCapture.Maui.Tests" />
@@ -57,8 +49,8 @@
 
 		<!-- Descrições -->
 		<Title>MAUI Global Keyboard Capture</Title>
-		<Description>A powerful .NET MAUI library for global keyboard capture with support for barcode scanners, hotkeys, and cross-platform input handling.</Description>
-		<Summary>Cross-platform global keyboard capture and input handling library for .NET MAUI applications, supporting hotkeys, barcode scanners, and system-wide keyboard monitoring.</Summary>
+		<Description>Application-wide keyboard capture for .NET MAUI with keyboard-wedge barcode scanner and hotkey support.</Description>
+		<Summary>Keyboard capture, hotkeys, and barcode scanner input inside active .NET MAUI application windows.</Summary>
 		<PackageReleaseNotes>
 1.1.0:
  - Feature: HotkeyHandler.UnregisterHotkey(string), UnregisterHotkey(KeyEventArgs) and ClearHotkeys() allow removing previously registered hotkeys (string overload uses the same modifier normalization as Register).
@@ -76,7 +68,7 @@
  - Fix: BarcodeHandler clears the internal buffer in a finally block so a throwing BarcodeScanned subscriber does not contaminate the next scan.
  - Perf: AndroidKeyHandler.ProcessKeyEvent no longer allocates a string per keystroke; KeyboardHelper has a new char overload of ToChar used when KeyEvent.DisplayLabel is already a char.
  - API: KeyEventArgs.PlatformEvent is now declared object? to match its actual nullable usage.
- - Breaking (DI consumers only): KeyHandlerService constructor now takes a KeyHandlerOptions parameter. The standard MauiAppBuilder.UseKeyboardHandling()/AddKeyboardHandling() wiring resolves this automatically.
+ - Compatibility: the original two-argument KeyHandlerService constructor remains available for manual DI consumers.
 
 1.0.3:
  - Fix: WindowsKeyHandler.Cleanup now unsubscribes from PreviewKeyDown (previously unsubscribed from the wrong event, leaving the handler attached and leaking subscriptions on re-init).
@@ -115,11 +107,6 @@
 		<DebugType>portable</DebugType>
 		<DebugSymbols>true</DebugSymbols>
 	</PropertyGroup>
-
-	<!-- Source Link para debugging -->
-	<ItemGroup>
-		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All"/>
-	</ItemGroup>
 
 	<!-- Condição para Source Link em Release -->
 	<PropertyGroup Condition="'$(Configuration)' == 'Release'">

@@ -22,6 +22,13 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
 
     public KeyHandlerService(
         IPlatformKeyHandler platformHandler,
+        ILogger<KeyHandlerService> logger)
+        : this(platformHandler, logger, new KeyHandlerOptions())
+    {
+    }
+
+    public KeyHandlerService(
+        IPlatformKeyHandler platformHandler,
         ILogger<KeyHandlerService> logger,
         KeyHandlerOptions options)
     {

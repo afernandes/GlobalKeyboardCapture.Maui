@@ -8,6 +8,18 @@ namespace GlobalKeyboardCapture.Maui.Tests;
 
 public class KeyHandlerServiceTests
 {
+    [Fact]
+    public void CompatibilityConstructorUsesDefaultOptions()
+    {
+        var platform = new FakePlatformKeyHandler();
+
+        using var service = new KeyHandlerService(
+            platform,
+            NullLogger<KeyHandlerService>.Instance);
+
+        service.Should().NotBeNull();
+    }
+
     private static (KeyHandlerService svc, FakePlatformKeyHandler platform) Build(
         KeyHandlerOptions? options = null)
     {

@@ -11,6 +11,7 @@ namespace GlobalKeyboardCapture.Maui;
 public class WindowsKeyHandler : IPlatformKeyHandler
 {
     private Microsoft.UI.Xaml.Window? _window;
+    private Microsoft.UI.Xaml.UIElement? _subscribedContent;
     private Action<KeyEventArgs>? _onKeyPressed;
 
     readonly Func<VirtualKey, CoreVirtualKeyStates> GetKeyState;
@@ -27,15 +28,50 @@ public class WindowsKeyHandler : IPlatformKeyHandler
 
     public void Initialize(object platformView)
     {
-        if (_window?.Content != null)
-        {
-            _window.Content.PreviewKeyDown -= OnKeyDown;
-        }
+        // Detach from any previously bound window/content first.
+        Unsubscribe();
 
         _window = platformView as Microsoft.UI.Xaml.Window;
-        if (_window?.Content != null)
+        if (_window == null)
+            return;
+
+        // During OnLaunched the MAUI root content is frequently not attached yet, so a
+        // one-shot "subscribe if Content != null" silently captures nothing. Try now and,
+        // if Content isn't ready, retry on each activation until it is.
+        if (!TrySubscribe())
+            _window.Activated += OnWindowActivated;
+    }
+
+    private void OnWindowActivated(object sender, Microsoft.UI.Xaml.WindowActivatedEventArgs args)
+    {
+        if (TrySubscribe() && _window != null)
+            _window.Activated -= OnWindowActivated;
+    }
+
+    private bool TrySubscribe()
+    {
+        var content = _window?.Content;
+        if (content == null)
+            return false;
+        if (ReferenceEquals(content, _subscribedContent))
+            return true;
+
+        // Move the subscription to the exact current content element.
+        if (_subscribedContent != null)
+            _subscribedContent.PreviewKeyDown -= OnKeyDown;
+        content.PreviewKeyDown += OnKeyDown;
+        _subscribedContent = content;
+        return true;
+    }
+
+    private void Unsubscribe()
+    {
+        if (_window != null)
+            _window.Activated -= OnWindowActivated;
+        if (_subscribedContent != null)
         {
-            _window.Content.PreviewKeyDown += OnKeyDown;
+            _subscribedContent.PreviewKeyDown -= OnKeyDown;
+            _subscribedContent = null;
         }
     }
 
@@ -98,10 +134,7 @@ public class WindowsKeyHandler : IPlatformKeyHandler
 
     public void Cleanup()
     {
-        if (_window?.Content != null)
-        {
-            _window.Content.PreviewKeyDown -= OnKeyDown;
-        }
+        Unsubscribe();
         _window = null;
     }
 }

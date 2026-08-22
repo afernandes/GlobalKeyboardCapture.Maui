@@ -4,15 +4,14 @@ using GlobalKeyboardCapture.Maui.Core.Models;
 namespace GlobalKeyboardCapture.Maui.Sample;
 
 /// <summary>
-/// Handler de demonstração que exibe todas as teclas capturadas.
-/// Útil para debug e visualização do funcionamento da captura de teclas.
+/// Sample handler that exposes every captured key to the diagnostics page.
 /// </summary>
-public class KeyDisplayHandler : IKeyHandler
+public sealed class KeyDisplayHandler : IKeyHandler
 {
     /// <summary>
-    /// Evento disparado quando uma tecla é pressionada, retornando sua representação em string
+    /// Raised when a key is captured.
     /// </summary>
-    public event EventHandler<string> KeyPressed;
+    public event EventHandler<string>? KeyPressed;
 
     public bool ShouldHandle(KeyEventArgs key) => true;
 

@@ -22,7 +22,6 @@ jobs:
         with:
           dotnet-version: |
             8.0.x
-            9.0.x
 
       - name: Install MAUI workload
         run: dotnet workload install maui --ignore-failed-sources
@@ -58,7 +57,6 @@ jobs:
         with:
           dotnet-version: |
             8.0.x
-            9.0.x
 
       - name: Install MAUI workload
         run: dotnet workload install maui --ignore-failed-sources
@@ -68,6 +66,12 @@ jobs:
 
       - name: Build library (Release)
         run: dotnet build GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -c Release --no-restore
+
+      # Builds the platform handlers (#if WINDOWS/#elif ANDROID) and the
+      # UseKeyboardHandling()/AddKeyboardHandling() wiring, which the library and
+      # test builds never compile — without this, platform/DI regressions pass green.
+      - name: Build sample
+        run: dotnet build GlobalKeyboardCapture.Maui.Sample/GlobalKeyboardCapture.Maui.Sample.csproj -c Release
 
       - name: Upload NuGet package
         if: matrix.os == 'windows-latest'
