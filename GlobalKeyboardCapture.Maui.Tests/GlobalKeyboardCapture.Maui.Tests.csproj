@@ -22,6 +22,7 @@
   -->
   <ItemGroup>
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyEventArgs.cs" Link="Linked\KeyEventArgs.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\BarcodeScanResult.cs" Link="Linked\BarcodeScanResult.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyboardDeviceInfo.cs" Link="Linked\KeyboardDeviceInfo.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyboardDiagnosticEventArgs.cs" Link="Linked\KeyboardDiagnosticEventArgs.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyboardEventType.cs" Link="Linked\KeyboardEventType.cs" />
@@ -36,6 +37,7 @@
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IPlatformKeyHandler.cs" Link="Linked\IPlatformKeyHandler.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Services\KeyHandlerService.cs" Link="Linked\KeyHandlerService.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Configuration\KeyHandlerOptions.cs" Link="Linked\KeyHandlerOptions.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Configuration\BarcodeScannerProfile.cs" Link="Linked\BarcodeScannerProfile.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Handlers\HotkeyHandler.cs" Link="Linked\HotkeyHandler.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Handlers\BarcodeHandler.cs" Link="Linked\BarcodeHandler.cs" />
   </ItemGroup>

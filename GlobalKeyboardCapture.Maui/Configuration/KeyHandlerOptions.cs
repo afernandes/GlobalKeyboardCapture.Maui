@@ -1,6 +1,12 @@
 ﻿namespace GlobalKeyboardCapture.Maui.Configuration;
 public class KeyHandlerOptions
 {
+    /// <summary>
+    /// Gets explicitly configured keyboard-wedge scanner profiles. When empty, the
+    /// legacy barcode timeout and length properties define a compatible default profile.
+    /// </summary>
+    public IList<BarcodeScannerProfile> BarcodeProfiles { get; } = new List<BarcodeScannerProfile>();
+
     public int BarcodeTimeout { get; set; } = 100;
     public int MinBarcodeLength { get; set; } = 5;
 
