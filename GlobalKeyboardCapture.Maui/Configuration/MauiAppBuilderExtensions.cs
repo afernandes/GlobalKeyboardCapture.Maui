@@ -24,6 +24,7 @@ public static class MauiAppBuilderExtensions
 #elif ANDROID
             events.AddAndroid(android => android
                 .OnCreate((activity, bundle) => ResolveLifecycleHandler()?.OnPlatformViewCreated(activity))
+                .OnResume(activity => ResolveLifecycleHandler()?.OnPlatformViewCreated(activity))
                 .OnDestroy(activity => ResolveLifecycleHandler()?.OnPlatformViewDestroyed(activity)));
 #elif IOS || MACCATALYST
             events.AddiOS(ios => ios

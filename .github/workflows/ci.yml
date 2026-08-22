@@ -130,7 +130,7 @@ jobs:
             adb install -r "$(find GlobalKeyboardCapture.Maui.Sample/bin/Release/net10.0-android -name '*-Signed.apk' -print -quit)"
             adb logcat -c
             adb shell monkey -p com.companyname.globalkeyboardcapturemauisample 1
-            timeout 60 sh -c 'until adb logcat -d -s GKC.Integration:I "*:S" | grep -F "Ready"; do sleep 1; done'
+            timeout 60 sh -c 'until adb logcat -d -s GKC.Integration:I "*:S" | grep -F "Ready;Views=1"; do sleep 1; done'
             timeout 30 sh -c 'until adb logcat -d -s GKC.Integration:I "*:S" | grep -F "Focused"; do sleep 1; done'
             adb emu event send EV_KEY:KEY_F1:1 EV_SYN:0:0
             sleep 0.1

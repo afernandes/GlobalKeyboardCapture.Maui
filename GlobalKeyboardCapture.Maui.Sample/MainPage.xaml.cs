@@ -63,7 +63,9 @@ public partial class MainPage : ContentPage
         CaptureScopeSwitch.IsToggled = true;
         UpdatePipelineStatus();
 #if ANDROID
-        Android.Util.Log.Info("GKC.Integration", "Ready");
+        Android.Util.Log.Info(
+            "GKC.Integration",
+            $"Ready;Views={_keyHandlerService.PlatformViewCount}");
 #endif
     }
 
