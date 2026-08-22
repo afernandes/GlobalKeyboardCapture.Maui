@@ -28,6 +28,18 @@ public class KeyHandlerOptions
     public bool StopOnHandled { get; set; }
 
     /// <summary>
+    /// Enables key-release events. Disabled by default to preserve the historical
+    /// key-down-only dispatch contract.
+    /// </summary>
+    public bool CaptureKeyUp { get; set; }
+
+    /// <summary>
+    /// Enables native auto-repeat key-down events. Disabled by default so held hotkeys
+    /// and scanner input do not fire repeatedly.
+    /// </summary>
+    public bool AllowKeyRepeat { get; set; }
+
+    /// <summary>
     /// Enables structured native/normalized keyboard diagnostics. Disabled by default
     /// so the input hot path performs no diagnostic string formatting.
     /// </summary>

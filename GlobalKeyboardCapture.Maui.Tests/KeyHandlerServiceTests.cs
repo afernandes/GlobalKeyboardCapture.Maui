@@ -38,6 +38,33 @@ public class KeyHandlerServiceTests
     }
 
     [Fact]
+    public void KeyUpAndAutoRepeatAreSuppressedByDefault()
+    {
+        var (svc, platform) = Build();
+        var recorder = new RecordingKeyHandler();
+        svc.RegisterHandler(recorder);
+
+        platform.Dispatch(new KeyEventArgs { Character = 'A', EventType = KeyboardEventType.KeyUp });
+        platform.Dispatch(new KeyEventArgs { Character = 'A', RepeatCount = 1 });
+
+        recorder.HandledKeys.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void KeyUpAndAutoRepeatCanBeEnabledIndependently()
+    {
+        var options = new KeyHandlerOptions { CaptureKeyUp = true, AllowKeyRepeat = true };
+        var (svc, platform) = Build(options);
+        var recorder = new RecordingKeyHandler();
+        svc.RegisterHandler(recorder);
+
+        platform.Dispatch(new KeyEventArgs { Character = 'A', EventType = KeyboardEventType.KeyUp });
+        platform.Dispatch(new KeyEventArgs { Character = 'A', RepeatCount = 1 });
+
+        recorder.HandledKeys.Should().HaveCount(2);
+    }
+
+    [Fact]
     public void RegisteredHandlerReceivesDispatchedKey()
     {
         var (svc, platform) = Build();

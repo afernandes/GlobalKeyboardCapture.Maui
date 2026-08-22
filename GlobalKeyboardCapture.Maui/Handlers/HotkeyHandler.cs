@@ -170,7 +170,7 @@ public sealed class HotkeyHandler : IKeyHandler
     public bool ShouldHandle(KeyEventArgs key)
     {
         ArgumentNullException.ThrowIfNull(key);
-        return true;
+        return key.EventType == KeyboardEventType.KeyDown;
     }
 
     private static KeyGesture ParseGesture(string value, string parameterName)

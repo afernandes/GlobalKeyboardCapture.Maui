@@ -17,6 +17,8 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
     private readonly IPlatformKeyHandler _platformHandler;
     private readonly ILogger<KeyHandlerService> _logger;
     private readonly KeyHandlerOptions _options;
+    private readonly CancellationTokenSource _asyncHandlerCancellation = new();
+    private readonly CancellationToken _asyncHandlerCancellationToken;
     private readonly HashSet<long> _activeSuspensions = [];
     private readonly Dictionary<object, PlatformViewRegistration> _platformViews =
         new(ReferenceEqualityComparer.Instance);
@@ -100,6 +102,7 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         _platformHandler = platformHandler ?? throw new ArgumentNullException(nameof(platformHandler));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _options = options ?? throw new ArgumentNullException(nameof(options));
+        _asyncHandlerCancellationToken = _asyncHandlerCancellation.Token;
         _handlers = new List<HandlerRegistration>(INITIAL_HANDLERS_CAPACITY);
         _platformHandler.ConfigureHandler(HandleKeyPress);
         if (_options.EnableDiagnostics)
@@ -169,6 +172,18 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
             return;
         }
 
+        if (key.EventType == KeyboardEventType.KeyUp && !_options.CaptureKeyUp)
+        {
+            ReportIgnoredEvent(key, "Key-up events are disabled.");
+            return;
+        }
+
+        if (key.IsRepeat && !_options.AllowKeyRepeat)
+        {
+            ReportIgnoredEvent(key, "Auto-repeat events are disabled.");
+            return;
+        }
+
         if (_options.EnableDiagnostics)
             ReportDiagnostic(KeyboardDiagnosticEventArgs.FromKeyEvent(key));
 
@@ -181,9 +196,20 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
             var handler = registration.Handler;
             try
             {
-                if (handler?.ShouldHandle(key) == true)
+                if (handler.ShouldHandle(key))
                 {
-                    handler.HandleKey(key);
+                    if (handler is IAsyncKeyHandler asyncHandler)
+                    {
+                        var snapshot = key.CreateSnapshot();
+                        _ = Task.Run(() => ExecuteAsyncHandler(
+                            asyncHandler,
+                            snapshot,
+                            _asyncHandlerCancellationToken));
+                    }
+                    else
+                    {
+                        handler.HandleKey(key);
+                    }
                 }
             }
             catch (Exception ex)
@@ -219,6 +245,35 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
                 _handlers.Insert(insertionIndex, registration);
 
             return new HandlerRegistrationToken(this, registration.Id);
+        }
+    }
+
+    private void ReportIgnoredEvent(KeyEventArgs key, string reason)
+    {
+        if (_options.EnableDiagnostics)
+        {
+            ReportDiagnostic(KeyboardDiagnosticEventArgs.FromKeyEvent(
+                key,
+                KeyboardDiagnosticStage.Ignored,
+                reason));
+        }
+    }
+
+    private async Task ExecuteAsyncHandler(
+        IAsyncKeyHandler handler,
+        KeyEventArgs snapshot,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await handler.HandleKeyAsync(snapshot, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Asynchronous handler failed to process key event");
         }
     }
 
@@ -433,29 +488,31 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
 
     private void Dispose(bool disposing)
     {
-        if (_isDisposed) return;
-
+        var shouldDispose = false;
         lock (_lockObject)
         {
-            if (_isDisposed) return;
-
-            if (disposing)
-            {
-                try
-                {
-                    _platformHandler?.Cleanup();
-                    _handlers.Clear();
-                    _activeSuspensions.Clear();
-                    _platformViews.Clear();
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error during service disposal");
-                }
-            }
-
+            if (_isDisposed)
+                return;
             _isDisposed = true;
+            shouldDispose = disposing;
+            _handlers.Clear();
+            _activeSuspensions.Clear();
+            _platformViews.Clear();
         }
+
+        if (!shouldDispose)
+            return;
+
+        _asyncHandlerCancellation.Cancel();
+        try
+        {
+            _platformHandler.Cleanup();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during service disposal");
+        }
+        _asyncHandlerCancellation.Dispose();
     }
 
     #endregion

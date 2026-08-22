@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using Android.Content;
 using Android.Views;
+using GlobalKeyboardCapture.Maui.Configuration;
 using GlobalKeyboardCapture.Maui.Core.Interfaces;
 using GlobalKeyboardCapture.Maui.Core.Models;
 using GlobalKeyboardCapture.Maui.Platforms.Android;
@@ -18,6 +19,7 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
 
     private readonly object _lockObject = new();
     private readonly ConcurrentDictionary<int, KeyboardDeviceInfo> _deviceCache = new();
+    private readonly KeyHandlerOptions _options;
     private Action<KeyEventArgs>? _onKeyPressed;
     private Action<KeyboardDiagnosticEventArgs>? _onDiagnostic;
     private Activity? _activity;
@@ -27,6 +29,16 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
     private bool _isDisposed;
 
     public bool SupportsMultiplePlatformViews => false;
+
+    public AndroidKeyHandler()
+        : this(new KeyHandlerOptions())
+    {
+    }
+
+    public AndroidKeyHandler(KeyHandlerOptions options)
+    {
+        _options = options ?? throw new ArgumentNullException(nameof(options));
+    }
 
     public void ConfigureHandler(Action<Core.Models.KeyEventArgs> onKeyPressed)
     {
@@ -51,9 +63,14 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
         // so exact equality silently dropped F1-F12 and the numpad Enter. Fallback events
         // are skipped to avoid double-processing (e.g. numpad keys with NumLock off, which
         // the system re-emits as DPAD/Move keys).
-        if (e.Action != KEY_ACTION_DOWN)
+        if (e.Action is not (KeyEventActions.Down or KeyEventActions.Up))
         {
-            ReportDiagnostic(e, null, KeyboardDiagnosticStage.Ignored, "Only key-down events are enabled.");
+            ReportDiagnostic(e, null, KeyboardDiagnosticStage.Ignored, "Only key-down and key-up events are supported.");
+            return false;
+        }
+        if (e.Action == KeyEventActions.Up && !_options.CaptureKeyUp)
+        {
+            ReportDiagnostic(e, null, KeyboardDiagnosticStage.Ignored, "Key-up events are disabled.");
             return false;
         }
         if ((e.Flags & KEY_FLAGS_FROM_SYSTEM) != KEY_FLAGS_FROM_SYSTEM)
@@ -70,7 +87,7 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
         // incrementing RepeatCount, which would otherwise re-fire a held hotkey dozens
         // of times per second and flood the barcode buffer. Distinct keystrokes (and
         // barcode-scanner output) arrive as RepeatCount == 0, so this only drops repeats.
-        if (e.RepeatCount > 0)
+        if (e.RepeatCount > 0 && !_options.AllowKeyRepeat)
         {
             ReportDiagnostic(e, null, KeyboardDiagnosticStage.Ignored, "Auto-repeat is disabled.");
             return false;
@@ -179,7 +196,9 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
         var keyEvent = new KeyEventArgs
         {
             Platform = KeyboardPlatform.Android,
-            EventType = KeyboardEventType.KeyDown,
+            EventType = e.Action == KEY_ACTION_DOWN
+                ? KeyboardEventType.KeyDown
+                : KeyboardEventType.KeyUp,
             Location = IsNumpadKey(e.KeyCode) ? KeyLocation.Numpad : KeyLocation.Standard,
             NativeKeyCode = (int)e.KeyCode,
             NativeScanCode = e.ScanCode,

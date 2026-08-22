@@ -149,6 +149,18 @@ public sealed class KeyEventArgs
         get => WindowsKey || AltKey || ControlKey || ShiftKey;
     }
 
+    /// <summary>
+    /// Creates a detached event snapshot. Native event objects are excluded by default
+    /// because their lifetime generally ends when the platform callback returns.
+    /// </summary>
+    public KeyEventArgs CreateSnapshot(bool includePlatformEvent = false)
+    {
+        var snapshot = (KeyEventArgs)MemberwiseClone();
+        if (!includePlatformEvent)
+            snapshot.PlatformEvent = null;
+        return snapshot;
+    }
+
     // ToString implementation optimized
     public override string ToString()
     {
