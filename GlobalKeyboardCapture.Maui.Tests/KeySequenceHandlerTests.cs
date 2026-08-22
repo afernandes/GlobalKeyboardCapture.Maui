@@ -1,4 +1,4 @@
-using GlobalKeyboardCapture.Maui.Core.Models;
+﻿using GlobalKeyboardCapture.Maui.Core.Models;
 using GlobalKeyboardCapture.Maui.Handlers;
 using GlobalKeyboardCapture.Maui.Tests.TestDoubles;
 

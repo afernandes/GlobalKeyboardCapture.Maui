@@ -1,4 +1,4 @@
-namespace GlobalKeyboardCapture.Maui.Core.Interfaces;
+﻿namespace GlobalKeyboardCapture.Maui.Core.Interfaces;
 
 internal interface IPlatformViewLifecycleSink
 {

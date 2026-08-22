@@ -1,4 +1,4 @@
-namespace GlobalKeyboardCapture.Maui.Core.Interfaces;
+﻿namespace GlobalKeyboardCapture.Maui.Core.Interfaces;
 
 /// <summary>
 /// Coordinates platform-view attachment leases with native application lifecycle events.

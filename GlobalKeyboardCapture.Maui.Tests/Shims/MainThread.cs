@@ -1,4 +1,4 @@
-namespace Microsoft.Maui.ApplicationModel;
+﻿namespace Microsoft.Maui.ApplicationModel;
 
 internal static class MainThread
 {

@@ -1,4 +1,4 @@
-namespace GlobalKeyboardCapture.Maui.Core.Mapping;
+﻿namespace GlobalKeyboardCapture.Maui.Core.Mapping;
 
 internal static class PlatformKeyMapper
 {

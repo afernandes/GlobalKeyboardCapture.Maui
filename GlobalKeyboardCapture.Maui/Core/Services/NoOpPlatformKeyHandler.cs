@@ -1,4 +1,4 @@
-using GlobalKeyboardCapture.Maui.Core.Interfaces;
+﻿using GlobalKeyboardCapture.Maui.Core.Interfaces;
 using GlobalKeyboardCapture.Maui.Core.Models;
 
 namespace GlobalKeyboardCapture.Maui.Core.Services;

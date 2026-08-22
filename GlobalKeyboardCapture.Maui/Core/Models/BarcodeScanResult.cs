@@ -1,4 +1,4 @@
-namespace GlobalKeyboardCapture.Maui.Core.Models;
+﻿namespace GlobalKeyboardCapture.Maui.Core.Models;
 
 /// <summary>
 /// Contains the decoded value and capture metadata for a completed barcode scan.

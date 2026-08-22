@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using GlobalKeyboardCapture.Maui.Core.Interfaces;
 using GlobalKeyboardCapture.Maui.Core.Models;
 

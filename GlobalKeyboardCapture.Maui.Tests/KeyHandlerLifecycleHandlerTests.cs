@@ -1,4 +1,4 @@
-using GlobalKeyboardCapture.Maui.Handlers;
+﻿using GlobalKeyboardCapture.Maui.Handlers;
 using GlobalKeyboardCapture.Maui.Tests.TestDoubles;
 using Microsoft.Extensions.Logging.Abstractions;
 
