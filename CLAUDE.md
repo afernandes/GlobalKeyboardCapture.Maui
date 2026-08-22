@@ -6,10 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Two projects in one solution (`GlobalKeyboardCapture.Maui.sln`):
 
-- `GlobalKeyboardCapture.Maui/` — the NuGet library. Targets `net8.0-android` and (only on Windows hosts) `net8.0-windows10.0.19041.0`. Sets `CheckEolWorkloads=false` to silence NETSDK1202 (the .NET 8 MAUI workload is flagged EOL by newer SDKs).
-- `GlobalKeyboardCapture.Maui.Sample/` — the consumer app used to manually exercise the library. Targets `net8.0-android` (+ `net8.0-windows...` on Windows).
+- `GlobalKeyboardCapture.Maui/` — the NuGet library. Targets `net10.0-android` and (only on Windows hosts) `net10.0-windows10.0.19041.0`.
+- `GlobalKeyboardCapture.Maui.Sample/` — the consumer app used to manually exercise the library. Targets `net10.0-android` (+ `net10.0-windows...` on Windows).
 
-The library version is the `<CurrentVersion>` property in `GlobalKeyboardCapture.Maui.csproj` (currently `1.1.0`); the NuGet package is built only on `Release` (`GeneratePackageOnBuild=true`).
+The library version is the `<CurrentVersion>` property in `GlobalKeyboardCapture.Maui.csproj` (currently `2.0.0`); the NuGet package is built only on `Release` (`GeneratePackageOnBuild=true`).
 
 ## Build / Run Commands
 
@@ -19,14 +19,14 @@ dotnet restore GlobalKeyboardCapture.Maui.sln
 dotnet build   GlobalKeyboardCapture.Maui.sln
 
 # Build a specific target framework (Windows targets only build on Windows hosts)
-dotnet build GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -f net8.0-android
-dotnet build GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -f net8.0-windows10.0.19041.0
+dotnet build GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -f net10.0-android
+dotnet build GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -f net10.0-windows10.0.19041.0
 
 # Pack the NuGet (uses Release config; produces .nupkg + .snupkg)
 dotnet pack  GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -c Release
 
 # Run / deploy the sample
-dotnet build GlobalKeyboardCapture.Maui.Sample/GlobalKeyboardCapture.Maui.Sample.csproj -t:Run -f net8.0-windows10.0.19041.0
+dotnet build GlobalKeyboardCapture.Maui.Sample/GlobalKeyboardCapture.Maui.Sample.csproj -t:Run -f net10.0-windows10.0.19041.0
 ```
 
 `GlobalKeyboardCapture.Maui.Tests/` contains the cross-platform unit suite. Run it with `dotnet test GlobalKeyboardCapture.Maui.Tests/GlobalKeyboardCapture.Maui.Tests.csproj`. There is no dedicated lint task. Style is enforced via `.editorconfig` (4-space indent, `utf-8-bom`, system usings sorted first). When stale build artifacts cause weird MAUI/Android errors, run the PowerShell helper `delete-bin-obj.ps1` to wipe every `bin/`, `obj/`, and `.vs/`.

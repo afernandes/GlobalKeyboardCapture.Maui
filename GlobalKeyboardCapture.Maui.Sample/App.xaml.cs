@@ -30,14 +30,11 @@ namespace GlobalKeyboardCapture.Maui.Sample
             // The handler will treat all these variations as the same hotkey.
             hotkeyHandler.RegisterHotkey("Shift+Alt+X", () =>
             {
-                MainThread.BeginInvokeOnMainThread(async () =>
-                {
-                    await Current!.Windows[0].Page!.DisplayAlert(
-                        "Global Hotkey Detected",
-                        "This hotkey (Alt+Shift+X) is registered globally and works across all pages in the application.\r\n" +
-                        "It demonstrates the library's ability to capture keyboard input at the application level.",
-                        "Got it!");
-                });
+                _ = MainThread.InvokeOnMainThreadAsync(() =>
+                    Current!.Windows[0].Page!.DisplayAlertAsync(
+                        "App-wide Hotkey Detected",
+                        "This hotkey (Alt+Shift+X) works across all pages while this application is active.",
+                        "Got it!"));
             });
 
             keyHandlerService.RegisterHandler(hotkeyHandler);

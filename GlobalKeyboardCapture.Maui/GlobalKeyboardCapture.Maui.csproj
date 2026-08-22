@@ -1,14 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFrameworks>net8.0-android</TargetFrameworks>
-		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net8.0-windows10.0.19041.0</TargetFrameworks>
-		<!-- net8.0 workloads are flagged EOL by newer .NET SDKs; silence NETSDK1202 -->
-		<CheckEolWorkloads>false</CheckEolWorkloads>
+		<TargetFrameworks>net10.0-android</TargetFrameworks>
+		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
 		<UseMaui>true</UseMaui>
-		<!-- Fallback when the active MAUI workload doesn't supply MauiVersion (e.g. an SDK
-		     band that doesn't target net8.0); resolves NU1015 on Microsoft.Maui.Controls. -->
-		<MauiVersion Condition="'$(MauiVersion)' == ''">8.0.100</MauiVersion>
 		<SingleProject>true</SingleProject>
 		<LangVersion>latest</LangVersion>
 		<ImplicitUsings>enable</ImplicitUsings>
@@ -26,7 +21,7 @@
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</SupportedOSPlatformVersion>
 		<TargetPlatformMinVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">10.0.17763.0</TargetPlatformMinVersion>
 
-        <CurrentVersion>1.1.0</CurrentVersion>
+        <CurrentVersion>2.0.0</CurrentVersion>
 	</PropertyGroup>
 
     <ItemGroup>
