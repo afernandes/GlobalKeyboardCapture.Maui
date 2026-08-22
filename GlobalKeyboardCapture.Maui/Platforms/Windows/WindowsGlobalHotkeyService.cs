@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Runtime.InteropServices;
 using GlobalKeyboardCapture.Maui.Core.Interfaces;
 using GlobalKeyboardCapture.Maui.Core.Models;
@@ -9,7 +9,7 @@ namespace GlobalKeyboardCapture.Maui;
 /// <summary>
 /// Implements true operating-system global hotkeys through RegisterHotKey and WM_HOTKEY.
 /// </summary>
-public sealed class WindowsGlobalHotkeyService :
+internal sealed partial class WindowsGlobalHotkeyService :
     IGlobalHotkeyService,
     IPlatformViewLifecycleSink,
     IDisposable
@@ -398,34 +398,36 @@ public sealed class WindowsGlobalHotkeyService :
         GC.SuppressFinalize(this);
     }
 
-    [DllImport("user32.dll", SetLastError = true)]
+    [LibraryImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool RegisterHotKey(nint windowHandle, int id, uint modifiers, uint virtualKey);
+    private static partial bool RegisterHotKey(nint windowHandle, int id, uint modifiers, uint virtualKey);
 
-    [DllImport("user32.dll", SetLastError = true)]
+    [LibraryImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool UnregisterHotKey(nint windowHandle, int id);
+    private static partial bool UnregisterHotKey(nint windowHandle, int id);
 
-    [DllImport("user32.dll", CharSet = CharSet.Unicode, ExactSpelling = true)]
-    private static extern short VkKeyScanW(char character);
+    [LibraryImport("user32.dll", EntryPoint = "VkKeyScanW")]
+    private static partial short VkKeyScanW([MarshalAs(UnmanagedType.U2)] char character);
 
-    [DllImport("comctl32.dll", SetLastError = true)]
+    [LibraryImport("comctl32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetWindowSubclass(
+    private static partial bool SetWindowSubclass(
         nint windowHandle,
+        [MarshalAs(UnmanagedType.FunctionPtr)]
         SubclassProcedure subclassProcedure,
         nuint subclassId,
         nuint referenceData);
 
-    [DllImport("comctl32.dll", SetLastError = true)]
+    [LibraryImport("comctl32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool RemoveWindowSubclass(
+    private static partial bool RemoveWindowSubclass(
         nint windowHandle,
+        [MarshalAs(UnmanagedType.FunctionPtr)]
         SubclassProcedure subclassProcedure,
         nuint subclassId);
 
-    [DllImport("comctl32.dll")]
-    private static extern nint DefSubclassProc(
+    [LibraryImport("comctl32.dll")]
+    private static partial nint DefSubclassProc(
         nint windowHandle,
         uint message,
         nuint wordParameter,

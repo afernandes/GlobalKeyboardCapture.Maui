@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 
 namespace GlobalKeyboardCapture.Maui.Core.Services;
 
+/// <inheritdoc cref="IKeyHandlerService"/>
 public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
 {
     private const int INITIAL_HANDLERS_CAPACITY = 8;
@@ -27,8 +28,10 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
     private long _nextSuspensionId;
     private bool _isDisposed;
 
+    /// <inheritdoc/>
     public event EventHandler<KeyboardDiagnosticEventArgs>? DiagnosticEvent;
 
+    /// <inheritdoc/>
     public bool IsInitialized
     {
         get
@@ -40,6 +43,7 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         }
     }
 
+    /// <inheritdoc/>
     public int PlatformViewCount
     {
         get
@@ -51,6 +55,7 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         }
     }
 
+    /// <inheritdoc/>
     public int HandlerCount
     {
         get
@@ -62,6 +67,7 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         }
     }
 
+    /// <inheritdoc/>
     public bool IsCapturing
     {
         get
@@ -73,6 +79,7 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         }
     }
 
+    /// <inheritdoc/>
     public IReadOnlyList<IKeyHandler> Handlers
     {
         get
@@ -87,6 +94,9 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         }
     }
 
+    /// <summary>Creates a service with default options.</summary>
+    /// <param name="platformHandler">The native keyboard adapter.</param>
+    /// <param name="logger">The service logger.</param>
     public KeyHandlerService(
         IPlatformKeyHandler platformHandler,
         ILogger<KeyHandlerService> logger)
@@ -94,6 +104,10 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
     {
     }
 
+    /// <summary>Creates a service with explicit options.</summary>
+    /// <param name="platformHandler">The native keyboard adapter.</param>
+    /// <param name="logger">The service logger.</param>
+    /// <param name="options">Capture and dispatch options.</param>
     public KeyHandlerService(
         IPlatformKeyHandler platformHandler,
         ILogger<KeyHandlerService> logger,
@@ -109,6 +123,7 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
             _platformHandler.ConfigureDiagnostics(ReportDiagnostic);
     }
 
+    /// <inheritdoc/>
     public void Initialize(object platformView)
     {
         ArgumentNullException.ThrowIfNull(platformView);
@@ -221,6 +236,7 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         }
     }
 
+    /// <inheritdoc/>
     public IDisposable RegisterHandler(IKeyHandler handler, int priority = 0)
         => RegisterHandler(handler, priority, scope: null);
 
@@ -270,6 +286,7 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
+            _logger.LogDebug("Asynchronous keyboard handler canceled during service shutdown");
         }
         catch (Exception exception)
         {
@@ -277,6 +294,7 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         }
     }
 
+    /// <inheritdoc/>
     public IDisposable AttachPlatformView(object platformView)
     {
         ArgumentNullException.ThrowIfNull(platformView);
@@ -311,6 +329,7 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         }
     }
 
+    /// <inheritdoc/>
     public bool DetachPlatformView(object platformView)
     {
         if (platformView is null)
@@ -384,6 +403,7 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         }
     }
 
+    /// <inheritdoc/>
     public bool UnregisterHandler(IKeyHandler handler)
     {
         if (handler == null) return false;
@@ -395,6 +415,7 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         }
     }
 
+    /// <inheritdoc/>
     public IDisposable SuspendCapture()
     {
         lock (_lockObject)
@@ -406,6 +427,7 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         }
     }
 
+    /// <inheritdoc/>
     public void ResumeCapture()
     {
         lock (_lockObject)
@@ -415,6 +437,7 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         }
     }
 
+    /// <inheritdoc/>
     public IKeyboardCaptureScope CreateScope(string? name = null, bool isEnabled = true)
     {
         lock (_lockObject)
@@ -480,6 +503,7 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
 
     #region IDisposable Implementation
 
+    /// <summary>Stops native capture and releases all registrations and attachments.</summary>
     public void Dispose()
     {
         Dispose(true);

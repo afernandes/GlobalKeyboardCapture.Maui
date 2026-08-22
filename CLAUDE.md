@@ -1,88 +1,78 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code when changing this repository.
 
-## Repository Layout
+## Repository layout and support policy
 
-Two projects in one solution (`GlobalKeyboardCapture.Maui.sln`):
+The solution contains three projects:
 
-- `GlobalKeyboardCapture.Maui/` — the NuGet library. Targets `net10.0-android` and (only on Windows hosts) `net10.0-windows10.0.19041.0`.
-- `GlobalKeyboardCapture.Maui.Sample/` — the consumer app used to manually exercise the library. Targets `net10.0-android` (+ `net10.0-windows...` on Windows).
+- `GlobalKeyboardCapture.Maui/` — NuGet library targeting `net10.0-android`, `net10.0-ios`, `net10.0-maccatalyst`, and, on Windows hosts, `net10.0-windows10.0.19041.0`.
+- `GlobalKeyboardCapture.Maui.Sample/` — diagnostic consumer app for all four targets.
+- `GlobalKeyboardCapture.Maui.Tests/` — platform-neutral xUnit v3 tests using Microsoft.Testing.Platform.
 
-The library version is the `<CurrentVersion>` property in `GlobalKeyboardCapture.Maui.csproj` (currently `2.0.0`); the NuGet package is built only on `Release` (`GeneratePackageOnBuild=true`).
+The active 2.x line uses .NET MAUI 10. The .NET MAUI 8 compatibility-maintenance line is preserved on `codex/net8-maintenance-1.x`; do not add 2.x features to that branch. `global.json` pins SDK 10.0.400. The package version is `CurrentVersion` in the library project.
 
-## Build / Run Commands
+## Build and validation commands
 
 ```bash
-# Restore and build the whole solution
 dotnet restore GlobalKeyboardCapture.Maui.sln
-dotnet build   GlobalKeyboardCapture.Maui.sln
+dotnet test --project GlobalKeyboardCapture.Maui.Tests/GlobalKeyboardCapture.Maui.Tests.csproj -c Release
 
-# Build a specific target framework (Windows targets only build on Windows hosts)
-dotnet build GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -f net10.0-android
-dotnet build GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -f net10.0-windows10.0.19041.0
+dotnet build GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -c Release -f net10.0-android
+dotnet build GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -c Release -f net10.0-windows10.0.19041.0
+dotnet build GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -c Release -f net10.0-ios
+dotnet build GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -c Release -f net10.0-maccatalyst
 
-# Pack the NuGet (uses Release config; produces .nupkg + .snupkg)
-dotnet pack  GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -c Release
-
-# Run / deploy the sample
-dotnet build GlobalKeyboardCapture.Maui.Sample/GlobalKeyboardCapture.Maui.Sample.csproj -t:Run -f net10.0-windows10.0.19041.0
+dotnet pack GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -c Release
+dotnet format GlobalKeyboardCapture.Maui.sln --verify-no-changes
 ```
 
-`GlobalKeyboardCapture.Maui.Tests/` contains the cross-platform unit suite. Run it with `dotnet test GlobalKeyboardCapture.Maui.Tests/GlobalKeyboardCapture.Maui.Tests.csproj`. There is no dedicated lint task. Style is enforced via `.editorconfig` (4-space indent, `utf-8-bom`, system usings sorted first). When stale build artifacts cause weird MAUI/Android errors, run the PowerShell helper `delete-bin-obj.ps1` to wipe every `bin/`, `obj/`, and `.vs/`.
+Build the sample for every affected platform because that compiles lifecycle wiring, DI, XAML, and native handlers. MAUI builds are more reliable when run serially with `--disable-build-servers`. Do not use `--disable-build-servers` after the `dotnet test --project` arguments; Microsoft.Testing.Platform can interpret it as a test-runner option and discover zero tests.
 
 ## Architecture
 
-The library is a small **dispatcher + handler pipeline** that sits on top of a per-platform key-event source.
-
-```
-Platform OS event
-  → IPlatformKeyHandler  (Windows: PreviewKeyDown / Android: Window.Callback)
-  → KeyEventArgs (unified model)
-  → KeyHandlerService.HandleKeyPress
-  → foreach IKeyHandler: ShouldHandle(key) ? HandleKey(key)
+```text
+Native key source
+  -> IPlatformKeyHandler
+  -> KeyEventArgs / KeyGesture
+  -> KeyHandlerService (priority-ordered snapshot)
+  -> IKeyHandler or IAsyncKeyHandler
 ```
 
-### Wiring (two-step opt-in by the consumer)
+Platform adapters:
 
-Both calls are required in `MauiProgram.cs`:
+- Windows subscribes to `PreviewKeyDown`/`PreviewKeyUp` on each window's exact content element and supports concurrent windows.
+- Android wraps `Window.Callback`, always delegates to the original callback, suppresses fallback duplicates, and safely rebinds after Activity recreation.
+- iOS/Mac Catalyst observes `GCKeyboard.CoalescedKeyboard.KeyboardInput`; its events cannot prevent Apple native propagation.
 
-1. `builder.UseKeyboardHandling()` (`Configuration/MauiAppBuilderExtensions.cs`) — registers MAUI lifecycle hooks. On Windows it fires on `OnLaunched`; on Android on `OnCreate`/`OnResume`. The hook resolves `ILifecycleHandler` and calls `OnStart`/`OnResume`.
-2. `builder.Services.AddKeyboardHandling(options => …)` (`Configuration/ServiceCollectionExtensions.cs`) — DI registration. `IKeyHandlerService`, `ILifecycleHandler`, and `IPlatformKeyHandler` are singletons; `BarcodeHandler` and `HotkeyHandler` are **transient** (each page gets its own instance).
+Consumers must call both `.UseKeyboardHandling()` and `.AddKeyboardHandling(...)`. Lifecycle events create reference-counted platform-view leases. `IGlobalHotkeyService` is true OS-global behavior only on Windows; the normal pipeline is application-wide.
 
-The lifecycle handler (`KeyHandlerLifecycleHandler`) is what actually grabs the platform "view" and calls `IKeyHandlerService.Initialize(...)`:
-- Windows: `Application.Current.Windows[0].Handler.PlatformView` cast to `Microsoft.UI.Xaml.Window`.
-- Android: `Platform.CurrentActivity.Window.DecorView.RootView`.
+## Public contracts
 
-This is why a consumer page only needs to `RegisterHandler(...)` — the platform hook-up has already happened.
+- `KeyEventArgs.ToString()` and `KeyGesture.ToString()` are lookup/serialization contracts. Modifier order is `Ctrl+Alt+Shift+Win`. Changes require golden tests and a breaking-change review.
+- Prefer typed `KeyboardKey`, `KeyModifiers`, and `KeyGesture` APIs. Preserve legacy aliases and string behavior.
+- Registration, scope, suspension, sequence, and global-hotkey tokens are idempotent. An old token must not remove a newer replacement.
+- Handler priority is descending; equal priorities retain registration order.
+- `IAsyncKeyHandler` receives a detached snapshot. Async changes to `Handled` cannot affect native propagation.
+- Scanner profiles are snapshotted in `BarcodeHandler`; mutations after construction do not change an active handler.
+- Keep all public members documented. Release builds generate XML docs and should have no CS1591 warnings.
 
-### `KeyEventArgs` and the hotkey string contract
+## Performance, trimming, and threading
 
-`Core/Models/KeyEventArgs.cs` is the single normalized event shape produced on both platforms. Its `ToString()` is **the lookup key** for `HotkeyHandler` — modifiers always emitted in the order `Ctrl+Alt+Shift+Win`, then a function key / character / special key name (`Enter`, `Esc`, `Up`, `Space`, …). When neither `Character` nor a named key was set, it falls back to `OEM{VirtualKey}` on Windows or the Android `KeyCode` name. **Any change to `ToString()` is a breaking change for registered hotkeys.**
+The input callback is a hot path. Avoid reflection, LINQ, blocking I/O, unnecessary formatting, and UI work there. Marshal UI actions with `MainThread.BeginInvokeOnMainThread`. The service snapshots registrations under a lock and invokes handlers after releasing it; preserve that pattern.
 
-`HotkeyHandler.NormalizeHotkey(...)` mirrors the same modifier order and accepts aliases (`Control`→`Ctrl`, `Windows`→`Win`, `ESCAPE`→`Esc`). Registration is case-insensitive and order-insensitive — keep these two normalizers in sync.
+The library declares `IsTrimmable`, `IsAotCompatible`, and enables trim analysis. It intentionally has no whole-assembly `trim.xml`. Do not add blanket trim-warning suppression or reflection-based mapping without a targeted preservation strategy and a trimmed consumer publish test.
 
-### Platform handlers
+Every stateful native component needs symmetric attach/detach and disposal. Preserve the Android callback chain even when another library wraps this library's callback after installation.
 
-- `Platforms/Windows/WindowsKeyHandler.cs` — subscribes to `PreviewKeyDown` on the window's content; reads modifier state via `InputKeyboardSource.GetKeyStateForCurrentThread`. `KeyboardHelper` maps `VirtualKey` → `char` (letters, numerics, numpad, OEM punctuation 186–222) and `F1`–`F24`.
-- `Platforms/Android/AndroidKeyHandler.cs` — installs a `Window.ICallback` proxy (`KeyEventCallback`) that forwards every `DispatchKeyEvent`. It processes trusted, non-fallback `KeyDown` events with `RepeatCount == 0`; flag checks are bitwise because Android flags form a bit field. **Always preserve and forward to the original `IWindowCallback`** — replacing it without delegation will break MAUI's input pipeline. Cleanup must restore `_originalDispatcher`.
+## Tests and platform behavior
 
-`KeyboardHelper` exists in both platform folders with platform-specific inputs. Windows maps `VirtualKey` to characters and F1–F24; Android maps display labels to characters, while F1–F12 are resolved directly from `Keycode` in `AndroidKeyHandler`.
+Pure key maps live under `Core/Mapping` so tests can exercise tables without MAUI workloads. Add golden tests for canonical key strings, aliases, dispatch order, disposal races, and scanner framing. Platform compilation alone is not hardware validation; call out when a keyboard, scanner, device farm, or Apple hardware is still required.
 
-### Adding a new `IKeyHandler`
+The permanent key limits are documented in README: Windows F1-F24, Android F1-F12, Apple F1-F20. Apple printable-symbol mapping currently uses a US-style USB HID table.
 
-Implement `Core/Interfaces/IKeyHandler.cs` (`ShouldHandle` + `HandleKey`), register it in DI if it has dependencies, and call `IKeyHandlerService.RegisterHandler(...)` (typically in `OnAppearing`) and `UnregisterHandler(...)` in `OnDisappearing`. Set `key.Handled = true` to stop the platform from continuing to propagate the event (used by `BarcodeHandler` and `HotkeyHandler` after they consume it). UI work must be marshalled with `MainThread.BeginInvokeOnMainThread` — handlers run on the platform's input thread.
+## Style and git workflow
 
-## Conventions and Constraints
+Follow `.editorconfig`: four-space C# indentation, nullable enabled, system usings first, and English identifiers/comments. Match established constant casing in an edited file. Use `#if WINDOWS`, `#elif ANDROID`, and `#elif IOS || MACCATALYST` for platform branches; MAUI auto-includes platform folders.
 
-- **Trimming / AOT.** The library sets `IsAotCompatible`, `IsTrimmable`, and `EnableTrimAnalyzer`. It intentionally has no assembly-wide linker root; keep reflection-free paths analyzable and use narrowly scoped annotations only when a dynamic dependency is unavoidable.
-- **Hot paths use `[MethodImpl(MethodImplOptions.AggressiveInlining)]` and `StringBuilder` / `ReadOnlySpan<char>` deliberately.** Don't replace these with LINQ or string concatenation in `KeyEventArgs.ToString`, `HotkeyHandler.NormalizeHotkey`, the `KeyboardHelper` lookups, or the per-event paths in `AndroidKeyHandler.DispatchKeyEvent` / `WindowsKeyHandler.OnKeyDown` — the recent commit history shows allocations being deliberately removed from these paths.
-- **Thread safety.** `KeyHandlerService` guards `_handlers` with a `lock` and snapshots to an array before invoking — keep that pattern; handlers may register/unregister mid-dispatch.
-- **Disposal.** `KeyHandlerService`, `BarcodeHandler`, and `AndroidKeyHandler` implement `IDisposable` with a `_isDisposed` guard plus `ThrowIfDisposed`. New stateful components in this layer should follow the same pattern (the Android handler in particular **must** restore `_originalDispatcher` on dispose).
-- **Platform compilation.** Use `#if WINDOWS` / `#elif ANDROID` for platform branches. The `Platforms/Windows/*.cs` and `Platforms/Android/*.cs` files are auto-included by the MAUI SDK only for the matching target — do not add explicit `<Compile>` items.
-- **Style.** `.editorconfig` enforces `dotnet_sort_system_directives_first`, predefined types over BCL names, and PascalCase for `const` fields. Existing constants (e.g. `INITIAL_HANDLERS_CAPACITY`) use `SCREAMING_SNAKE_CASE` — match the surrounding file rather than the editorconfig default when editing inside one.
-- **Comments and identifiers.** A few legacy comments are in Portuguese; new code should use English for both comments and identifiers.
-
-## Git Workflow
-
-Active development branch for this work: `claude/add-claude-documentation-RsaYl`. Push with `git push -u origin <branch>`. Do not push to `main`/`master` and do not open a PR unless explicitly asked.
+Preserve unrelated working-tree changes. Use a `codex/` branch, never push directly to `main`, and open a pull request only when explicitly requested.

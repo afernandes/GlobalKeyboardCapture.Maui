@@ -5,7 +5,7 @@ using View = Android.Views.View;
 
 namespace GlobalKeyboardCapture.Maui.Platforms.Android;
 
-public class KeyEventCallback : Java.Lang.Object, IWindowCallback
+internal sealed class KeyEventCallback : Java.Lang.Object, IWindowCallback
 {
     private AndroidKeyHandler? _handler;
     private readonly IWindowCallback _original;
@@ -44,23 +44,23 @@ public class KeyEventCallback : Java.Lang.Object, IWindowCallback
     }
 
     #region Implement other IWindowCallback methods
-    public bool DispatchGenericMotionEvent(MotionEvent? e) => _original.DispatchGenericMotionEvent(e) ;
-    public bool DispatchKeyShortcutEvent(KeyEvent? e) => _original.DispatchKeyShortcutEvent(e) ;
-    public bool DispatchPopulateAccessibilityEvent(AccessibilityEvent? e) => _original.DispatchPopulateAccessibilityEvent(e) ;
-    public bool DispatchTouchEvent(MotionEvent? e) => _original.DispatchTouchEvent(e) ;
-    public bool DispatchTrackballEvent(MotionEvent? e) => _original.DispatchTrackballEvent(e) ;
+    public bool DispatchGenericMotionEvent(MotionEvent? e) => _original.DispatchGenericMotionEvent(e);
+    public bool DispatchKeyShortcutEvent(KeyEvent? e) => _original.DispatchKeyShortcutEvent(e);
+    public bool DispatchPopulateAccessibilityEvent(AccessibilityEvent? e) => _original.DispatchPopulateAccessibilityEvent(e);
+    public bool DispatchTouchEvent(MotionEvent? e) => _original.DispatchTouchEvent(e);
+    public bool DispatchTrackballEvent(MotionEvent? e) => _original.DispatchTrackballEvent(e);
     public void OnActionModeFinished(ActionMode? mode) => _original.OnActionModeFinished(mode);
     public void OnActionModeStarted(ActionMode? mode) => _original.OnActionModeStarted(mode);
     public void OnAttachedToWindow() => _original.OnAttachedToWindow();
     public void OnContentChanged() => _original.OnContentChanged();
-    public bool OnCreatePanelMenu(int featureId, IMenu menu) => _original.OnCreatePanelMenu(featureId, menu) ;
+    public bool OnCreatePanelMenu(int featureId, IMenu menu) => _original.OnCreatePanelMenu(featureId, menu);
     public View? OnCreatePanelView(int featureId) => _original.OnCreatePanelView(featureId);
     public void OnDetachedFromWindow() => _original.OnDetachedFromWindow();
     public bool OnMenuItemSelected(int featureId, IMenuItem item) => _original.OnMenuItemSelected(featureId, item);
-    public bool OnMenuOpened(int featureId, IMenu menu) => _original.OnMenuOpened(featureId, menu) ;
+    public bool OnMenuOpened(int featureId, IMenu menu) => _original.OnMenuOpened(featureId, menu);
     public void OnPanelClosed(int featureId, IMenu menu) => _original.OnPanelClosed(featureId, menu);
-    public bool OnPreparePanel(int featureId, View? view, IMenu menu) => _original.OnPreparePanel(featureId, view, menu) ;
-    public bool OnSearchRequested() => _original.OnSearchRequested() ;
+    public bool OnPreparePanel(int featureId, View? view, IMenu menu) => _original.OnPreparePanel(featureId, view, menu);
+    public bool OnSearchRequested() => _original.OnSearchRequested();
     public bool OnSearchRequested(SearchEvent? searchEvent) => OperatingSystem.IsAndroidVersionAtLeast(23)
         ? _original.OnSearchRequested(searchEvent)
         : _original.OnSearchRequested();

@@ -1,11 +1,11 @@
-using GlobalKeyboardCapture.Maui.Core.Interfaces;
+﻿using GlobalKeyboardCapture.Maui.Core.Interfaces;
 
 namespace GlobalKeyboardCapture.Maui.Handlers;
 
 /// <summary>
 /// Owns one platform-view attachment lease for each native window or activity.
 /// </summary>
-public sealed class KeyHandlerLifecycleHandler : ILifecycleHandler
+internal sealed class KeyHandlerLifecycleHandler : ILifecycleHandler
 {
     private readonly object _lockObject = new();
     private readonly IKeyHandlerService _keyHandlerService;

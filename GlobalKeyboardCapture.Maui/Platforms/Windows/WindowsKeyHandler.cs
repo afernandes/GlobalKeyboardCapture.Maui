@@ -1,15 +1,15 @@
-﻿using Windows.System;
-using Windows.UI.Core;
-using GlobalKeyboardCapture.Maui.Configuration;
+﻿using GlobalKeyboardCapture.Maui.Configuration;
 using GlobalKeyboardCapture.Maui.Core.Interfaces;
 using GlobalKeyboardCapture.Maui.Platforms.Windows;
 using Microsoft.UI.Input;
 using Microsoft.UI.Xaml.Input;
+using Windows.System;
+using Windows.UI.Core;
 using KeyEventArgs = GlobalKeyboardCapture.Maui.Core.Models.KeyEventArgs;
 
 namespace GlobalKeyboardCapture.Maui;
 
-public sealed class WindowsKeyHandler : IPlatformKeyHandler, IDisposable
+internal sealed class WindowsKeyHandler : IPlatformKeyHandler, IDisposable
 {
     private readonly object _lockObject = new();
     private readonly Dictionary<Microsoft.UI.Xaml.Window, WindowSubscription> _subscriptions =
@@ -22,7 +22,7 @@ public sealed class WindowsKeyHandler : IPlatformKeyHandler, IDisposable
     private readonly Func<VirtualKey, CoreVirtualKeyStates> _getKeyState;
 
     public bool SupportsMultiplePlatformViews => true;
-    
+
     public WindowsKeyHandler()
         : this(new KeyHandlerOptions())
     {
@@ -200,7 +200,7 @@ public sealed class WindowsKeyHandler : IPlatformKeyHandler, IDisposable
 
         keyEvent.Character = character;
         keyEvent.FunctionKey = functionKey;
-        
+
 
         _onKeyPressed?.Invoke(keyEvent);
 

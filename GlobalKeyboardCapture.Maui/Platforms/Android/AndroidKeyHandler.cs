@@ -1,5 +1,5 @@
-﻿using System.Runtime.CompilerServices;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 using Android.Content;
 using Android.Views;
 using GlobalKeyboardCapture.Maui.Configuration;
@@ -12,7 +12,7 @@ using NativeView = Android.Views.View;
 
 namespace GlobalKeyboardCapture.Maui;
 
-public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
+internal sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
 {
     private const KeyEventActions KEY_ACTION_DOWN = KeyEventActions.Down;
     private const KeyEventFlags KEY_FLAGS_FROM_SYSTEM = KeyEventFlags.FromSystem;

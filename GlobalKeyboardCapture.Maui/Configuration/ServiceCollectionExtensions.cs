@@ -4,8 +4,13 @@ using GlobalKeyboardCapture.Maui.Handlers;
 
 namespace GlobalKeyboardCapture.Maui.Configuration;
 
+/// <summary>Provides dependency-injection registration for keyboard capture services.</summary>
 public static class ServiceCollectionExtensions
 {
+    /// <summary>Registers the keyboard pipeline and its built-in handlers.</summary>
+    /// <param name="services">The application service collection.</param>
+    /// <param name="configure">An optional callback that configures capture behavior.</param>
+    /// <returns>The same service collection.</returns>
     public static IServiceCollection AddKeyboardHandling(
         this IServiceCollection services,
         Action<KeyHandlerOptions>? configure = null)

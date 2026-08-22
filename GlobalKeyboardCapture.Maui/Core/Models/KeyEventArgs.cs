@@ -3,14 +3,22 @@ using System.Text;
 
 namespace GlobalKeyboardCapture.Maui.Core.Models;
 
+/// <summary>
+/// Represents one platform-neutral keyboard transition and its native metadata.
+/// </summary>
 public sealed class KeyEventArgs
 {
     // Constants for string builder initial capacity
     private const int INITIAL_TOSTRING_CAPACITY = 32;
     private KeyboardKey _typedKey;
 
-    // Platform-specific event
+    /// <summary>
+    /// Gets or sets the native event object. Its lifetime normally ends when synchronous
+    /// dispatch returns; use <see cref="CreateSnapshot"/> for deferred work.
+    /// </summary>
     public object? PlatformEvent { get; set; }
+
+    /// <summary>Gets or sets whether the event was consumed by the application pipeline.</summary>
     public bool Handled { get; set; }
 
     /// <summary>Gets or sets the platform that produced this event.</summary>
@@ -40,8 +48,10 @@ public sealed class KeyEventArgs
     /// <summary>Gets or sets metadata about the originating input device.</summary>
     public KeyboardDeviceInfo? Device { get; set; }
 
-    // Characters and Function
+    /// <summary>Gets or sets the printable character represented by this event.</summary>
     public char? Character { get; set; }
+
+    /// <summary>Gets or sets the legacy canonical function-key name.</summary>
     public string? FunctionKey { get; set; }
 
     /// <summary>
@@ -54,10 +64,16 @@ public sealed class KeyEventArgs
         set => ApplyKeyboardKey(value);
     }
 
-    // Modifier Keys
+    /// <summary>Gets or sets whether Control is active.</summary>
     public bool ControlKey { get; set; }
+
+    /// <summary>Gets or sets whether Alt or Option is active.</summary>
     public bool AltKey { get; set; }
+
+    /// <summary>Gets or sets whether Shift is active.</summary>
     public bool ShiftKey { get; set; }
+
+    /// <summary>Gets or sets whether Windows, Command, or Meta is active.</summary>
     public bool WindowsKey { get; set; }
 
     /// <summary>
@@ -86,63 +102,105 @@ public sealed class KeyEventArgs
         }
     }
 
-    // Navigation Keys
+    /// <summary>Gets or sets whether the Up arrow is represented.</summary>
     public bool UpKey { get; set; }
+
+    /// <summary>Gets or sets whether the Down arrow is represented.</summary>
     public bool DownKey { get; set; }
+
+    /// <summary>Gets or sets whether the Left arrow is represented.</summary>
     public bool LeftKey { get; set; }
+
+    /// <summary>Gets or sets whether the Right arrow is represented.</summary>
     public bool RightKey { get; set; }
+
+    /// <summary>Gets or sets whether Home is represented.</summary>
     public bool HomeKey { get; set; }
+
+    /// <summary>Gets or sets whether End is represented.</summary>
     public bool EndKey { get; set; }
+
+    /// <summary>Gets or sets whether Page Up is represented.</summary>
     public bool PageUpKey { get; set; }
+
+    /// <summary>Gets or sets whether Page Down is represented.</summary>
     public bool PageDownKey { get; set; }
 
-    // Editing Keys
+    /// <summary>Gets or sets whether Enter or Return is represented.</summary>
     public bool EnterKey { get; set; }
+
+    /// <summary>Gets or sets whether Tab is represented.</summary>
     public bool TabKey { get; set; }
+
+    /// <summary>Gets or sets whether Backspace is represented.</summary>
     public bool BackspaceKey { get; set; }
+
+    /// <summary>Gets or sets whether forward Delete is represented.</summary>
     public bool DeleteKey { get; set; }
+
+    /// <summary>Gets or sets whether Escape is represented.</summary>
     public bool EscapeKey { get; set; }
+
+    /// <summary>Gets or sets whether Space is represented.</summary>
     public bool SpaceKey { get; set; }
+
+    /// <summary>Gets or sets whether Insert is represented.</summary>
     public bool InsertKey { get; set; }
 
-    // System Keys
+    /// <summary>Gets or sets whether Caps Lock is represented.</summary>
     public bool CapsLockKey { get; set; }
+
+    /// <summary>Gets or sets whether Num Lock is represented.</summary>
     public bool NumLockKey { get; set; }
+
+    /// <summary>Gets or sets whether Scroll Lock is represented.</summary>
     public bool ScrollLockKey { get; set; }
+
+    /// <summary>Gets or sets whether Print Screen is represented.</summary>
     public bool PrintScreenKey { get; set; }
+
+    /// <summary>Gets or sets whether Pause or Break is represented.</summary>
     public bool PauseBreakKey { get; set; }
+
+    /// <summary>Gets or sets whether the context-menu key is represented.</summary>
     public bool MenuKey { get; set; }
 
+    /// <summary>Gets whether Meta is the only active modifier.</summary>
     public bool OnlyWindows
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => WindowsKey && !AltKey && !ControlKey && !ShiftKey;
     }
 
+    /// <summary>Gets whether Alt is the only active modifier.</summary>
     public bool OnlyAlt
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => !WindowsKey && AltKey && !ControlKey && !ShiftKey;
     }
 
+    /// <summary>Gets whether Control is the only active modifier.</summary>
     public bool OnlyControl
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => !WindowsKey && !AltKey && ControlKey && !ShiftKey;
     }
 
+    /// <summary>Gets whether Shift is the only active modifier.</summary>
     public bool OnlyShift
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => !WindowsKey && !AltKey && !ControlKey && ShiftKey;
     }
 
+    /// <summary>Gets whether no modifier is active.</summary>
     public bool NoSpecialKeysPressed
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => !WindowsKey && !AltKey && !ControlKey && !ShiftKey;
     }
 
+    /// <summary>Gets whether at least one modifier is active.</summary>
     public bool AnySpecialKeyPressed
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -161,7 +219,11 @@ public sealed class KeyEventArgs
         return snapshot;
     }
 
-    // ToString implementation optimized
+    /// <summary>
+    /// Returns the canonical legacy lookup key with modifiers ordered as
+    /// <c>Ctrl+Alt+Shift+Win</c>.
+    /// </summary>
+    /// <returns>The normalized key representation.</returns>
     public override string ToString()
     {
         var list = new StringBuilder(INITIAL_TOSTRING_CAPACITY);
@@ -231,8 +293,8 @@ public sealed class KeyEventArgs
         if (PlatformEvent is Android.Views.KeyEvent keyEvent)
         {
             var unicodeChar = (char)keyEvent.UnicodeChar;
-            return !char.IsControl(unicodeChar) 
-                ? unicodeChar.ToString() 
+            return !char.IsControl(unicodeChar)
+                ? unicodeChar.ToString()
                 : keyEvent.KeyCode.ToString();
         }
 #endif

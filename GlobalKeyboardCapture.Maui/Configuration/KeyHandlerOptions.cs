@@ -1,4 +1,7 @@
 ﻿namespace GlobalKeyboardCapture.Maui.Configuration;
+/// <summary>
+/// Configures keyboard dispatch, diagnostics, repeat handling, and barcode scanning.
+/// </summary>
 public class KeyHandlerOptions
 {
     /// <summary>
@@ -7,7 +10,16 @@ public class KeyHandlerOptions
     /// </summary>
     public IList<BarcodeScannerProfile> BarcodeProfiles { get; } = new List<BarcodeScannerProfile>();
 
+    /// <summary>
+    /// Gets or sets the legacy default scanner timeout in milliseconds.
+    /// Ignored when <see cref="BarcodeProfiles"/> contains profiles.
+    /// </summary>
     public int BarcodeTimeout { get; set; } = 100;
+
+    /// <summary>
+    /// Gets or sets the legacy default minimum barcode length.
+    /// Ignored when <see cref="BarcodeProfiles"/> contains profiles.
+    /// </summary>
     public int MinBarcodeLength { get; set; } = 5;
 
     /// <summary>

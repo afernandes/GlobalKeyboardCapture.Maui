@@ -1,4 +1,4 @@
-#if IOS || MACCATALYST
+﻿#if IOS || MACCATALYST
 using Foundation;
 using GameController;
 using GlobalKeyboardCapture.Maui.Configuration;
@@ -11,7 +11,7 @@ namespace GlobalKeyboardCapture.Maui;
 /// <summary>
 /// Captures physical Apple keyboard state through the GameController keyboard profile.
 /// </summary>
-public sealed class AppleKeyHandler : IPlatformKeyHandler, IDisposable
+internal sealed class AppleKeyHandler : IPlatformKeyHandler, IDisposable
 {
     private static readonly KeyboardDeviceInfo AppleKeyboardDevice = new(
         0,

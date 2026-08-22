@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 
 namespace GlobalKeyboardCapture.Maui.Core.Models;
 
@@ -71,12 +71,18 @@ public readonly record struct KeyGesture
         ["MediaPrevious"] = KeyboardKey.MediaPrevious
     };
 
+    /// <summary>Gets the platform-neutral logical key.</summary>
     public KeyboardKey Key { get; }
 
+    /// <summary>Gets the printable character when <see cref="Key"/> is <see cref="KeyboardKey.Character"/>.</summary>
     public char? Character { get; }
 
+    /// <summary>Gets the required modifier flags.</summary>
     public KeyModifiers Modifiers { get; }
 
+    /// <summary>Creates a printable-character gesture.</summary>
+    /// <param name="character">The printable character.</param>
+    /// <param name="modifiers">The required modifiers.</param>
     public KeyGesture(char character, KeyModifiers modifiers = KeyModifiers.None)
     {
         ValidateModifiers(modifiers);
@@ -97,6 +103,9 @@ public readonly record struct KeyGesture
         Modifiers = modifiers;
     }
 
+    /// <summary>Creates a named-key gesture.</summary>
+    /// <param name="key">A named logical key other than <see cref="KeyboardKey.None"/> or <see cref="KeyboardKey.Character"/>.</param>
+    /// <param name="modifiers">The required modifiers.</param>
     public KeyGesture(KeyboardKey key, KeyModifiers modifiers = KeyModifiers.None)
     {
         ValidateModifiers(modifiers);
@@ -108,6 +117,9 @@ public readonly record struct KeyGesture
         Modifiers = modifiers;
     }
 
+    /// <summary>Parses a textual gesture using canonical names and supported aliases.</summary>
+    /// <param name="value">The gesture text, such as <c>Ctrl+S</c>.</param>
+    /// <returns>The parsed gesture.</returns>
     public static KeyGesture Parse(string value)
     {
         if (!TryParse(value, out var gesture))
@@ -116,6 +128,10 @@ public readonly record struct KeyGesture
         return gesture;
     }
 
+    /// <summary>Attempts to parse a textual gesture.</summary>
+    /// <param name="value">The gesture text.</param>
+    /// <param name="gesture">The parsed gesture when successful.</param>
+    /// <returns><see langword="true"/> when the text is valid.</returns>
     public static bool TryParse(string? value, out KeyGesture gesture)
     {
         gesture = default;
@@ -163,6 +179,9 @@ public readonly record struct KeyGesture
         return true;
     }
 
+    /// <summary>Creates a gesture from a normalized keyboard event.</summary>
+    /// <param name="keyEvent">The source event.</param>
+    /// <returns>The equivalent gesture.</returns>
     public static KeyGesture FromEvent(KeyEventArgs keyEvent)
     {
         ArgumentNullException.ThrowIfNull(keyEvent);
@@ -172,6 +191,10 @@ public readonly record struct KeyGesture
         return gesture;
     }
 
+    /// <summary>Attempts to create a gesture from a normalized keyboard event.</summary>
+    /// <param name="keyEvent">The source event.</param>
+    /// <param name="gesture">The equivalent gesture when successful.</param>
+    /// <returns><see langword="true"/> when the event contains a logical key.</returns>
     public static bool TryFromEvent(KeyEventArgs? keyEvent, out KeyGesture gesture)
     {
         gesture = default;
@@ -188,9 +211,14 @@ public readonly record struct KeyGesture
         return true;
     }
 
+    /// <summary>Determines whether a normalized event equals this gesture.</summary>
+    /// <param name="keyEvent">The event to compare.</param>
+    /// <returns><see langword="true"/> when key and modifiers match.</returns>
     public bool Matches(KeyEventArgs keyEvent) =>
         TryFromEvent(keyEvent, out var gesture) && Equals(gesture);
 
+    /// <summary>Returns the canonical <c>Ctrl+Alt+Shift+Win+Key</c> representation.</summary>
+    /// <returns>The canonical gesture string.</returns>
     public override string ToString()
     {
         if (Key == KeyboardKey.None)

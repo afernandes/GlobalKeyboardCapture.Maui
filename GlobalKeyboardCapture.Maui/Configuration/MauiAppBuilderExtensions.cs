@@ -1,10 +1,16 @@
-using GlobalKeyboardCapture.Maui.Core.Interfaces;
+﻿using GlobalKeyboardCapture.Maui.Core.Interfaces;
 using Microsoft.Maui.LifecycleEvents;
 
 namespace GlobalKeyboardCapture.Maui.Configuration;
 
+/// <summary>Provides MAUI lifecycle integration for keyboard capture.</summary>
 public static class MauiAppBuilderExtensions
 {
+    /// <summary>
+    /// Adds platform lifecycle callbacks that attach and detach native keyboard sources.
+    /// </summary>
+    /// <param name="builder">The MAUI application builder.</param>
+    /// <returns>The same builder instance.</returns>
     public static MauiAppBuilder UseKeyboardHandling(this MauiAppBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);

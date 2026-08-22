@@ -1,4 +1,4 @@
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Text;
 using GlobalKeyboardCapture.Maui.Configuration;
 using GlobalKeyboardCapture.Maui.Core.Interfaces;
@@ -6,6 +6,7 @@ using GlobalKeyboardCapture.Maui.Core.Models;
 
 namespace GlobalKeyboardCapture.Maui.Handlers;
 
+/// <summary>Decodes framed keyboard-wedge input using configured scanner profiles.</summary>
 public sealed class BarcodeHandler : IKeyHandler, IDisposable
 {
     private const int DEFAULT_BUFFER_CAPACITY = 50;
@@ -20,6 +21,9 @@ public sealed class BarcodeHandler : IKeyHandler, IDisposable
     /// <summary>Raised with decoded value, profile, timing, and device metadata.</summary>
     public event EventHandler<BarcodeScanResult>? ScanCompleted;
 
+    /// <summary>Creates a barcode handler from an immutable snapshot of scanner options.</summary>
+    /// <param name="options">Scanner profiles or legacy scanner settings.</param>
+    /// <param name="timeProvider">An optional clock used for timing and tests.</param>
     public BarcodeHandler(KeyHandlerOptions options, TimeProvider? timeProvider = null)
     {
         ArgumentNullException.ThrowIfNull(options);
@@ -59,6 +63,7 @@ public sealed class BarcodeHandler : IKeyHandler, IDisposable
         }
     }
 
+    /// <inheritdoc/>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool ShouldHandle(KeyEventArgs key)
     {
@@ -79,6 +84,7 @@ public sealed class BarcodeHandler : IKeyHandler, IDisposable
         return false;
     }
 
+    /// <inheritdoc/>
     public void HandleKey(KeyEventArgs key)
     {
         ArgumentNullException.ThrowIfNull(key);
@@ -221,13 +227,14 @@ public sealed class BarcodeHandler : IKeyHandler, IDisposable
     private static void ValidateLegacyOptions(KeyHandlerOptions options)
     {
         if (options.BarcodeTimeout <= 0)
-            throw new ArgumentOutOfRangeException(nameof(options.BarcodeTimeout), "Barcode timeout must be greater than zero.");
+            throw new ArgumentOutOfRangeException(nameof(options), "Barcode timeout must be greater than zero.");
         if (options.MinBarcodeLength <= 0)
-            throw new ArgumentOutOfRangeException(nameof(options.MinBarcodeLength), "Minimum barcode length must be greater than zero.");
+            throw new ArgumentOutOfRangeException(nameof(options), "Minimum barcode length must be greater than zero.");
         if (options.MaxBarcodeLength < options.MinBarcodeLength)
-            throw new ArgumentOutOfRangeException(nameof(options.MaxBarcodeLength), "Maximum barcode length must be greater than or equal to the minimum length.");
+            throw new ArgumentOutOfRangeException(nameof(options), "Maximum barcode length must be greater than or equal to the minimum length.");
     }
 
+    /// <summary>Clears scanner buffers and prevents further processing.</summary>
     public void Dispose()
     {
         if (_isDisposed)
@@ -323,11 +330,11 @@ public sealed class BarcodeHandler : IKeyHandler, IDisposable
         public static ProfileSnapshot Create(BarcodeScannerProfile profile)
         {
             if (profile.InterCharacterTimeout <= TimeSpan.Zero)
-                throw new ArgumentOutOfRangeException(nameof(profile.InterCharacterTimeout));
+                throw new ArgumentOutOfRangeException(nameof(profile));
             if (profile.MinLength <= 0)
-                throw new ArgumentOutOfRangeException(nameof(profile.MinLength));
+                throw new ArgumentOutOfRangeException(nameof(profile));
             if (profile.MaxLength < profile.MinLength)
-                throw new ArgumentOutOfRangeException(nameof(profile.MaxLength));
+                throw new ArgumentOutOfRangeException(nameof(profile));
             if (profile.TerminatorKeys.Count == 0 && profile.TerminatorCharacters.Count == 0)
                 throw new ArgumentException("A barcode scanner profile requires at least one terminator.", nameof(profile));
             if (profile.RequirePrefix && string.IsNullOrEmpty(profile.Prefix))
@@ -335,7 +342,7 @@ public sealed class BarcodeHandler : IKeyHandler, IDisposable
             if (profile.RequireSuffix && string.IsNullOrEmpty(profile.Suffix))
                 throw new ArgumentException("A required barcode suffix cannot be empty.", nameof(profile));
             if (profile.MaxAverageInterCharacterDelay <= TimeSpan.Zero)
-                throw new ArgumentOutOfRangeException(nameof(profile.MaxAverageInterCharacterDelay));
+                throw new ArgumentOutOfRangeException(nameof(profile));
 
             return new ProfileSnapshot(
                 profile.Name,

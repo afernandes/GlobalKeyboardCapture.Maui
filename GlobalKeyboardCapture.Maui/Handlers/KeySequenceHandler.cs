@@ -1,4 +1,4 @@
-using GlobalKeyboardCapture.Maui.Core.Interfaces;
+﻿using GlobalKeyboardCapture.Maui.Core.Interfaces;
 using GlobalKeyboardCapture.Maui.Core.Models;
 
 namespace GlobalKeyboardCapture.Maui.Handlers;
@@ -16,11 +16,14 @@ public sealed class KeySequenceHandler : IKeyHandler, IDisposable
     private long _nextRegistrationId;
     private bool _isDisposed;
 
+    /// <summary>Creates a sequence handler using the system clock.</summary>
     public KeySequenceHandler()
         : this(TimeProvider.System)
     {
     }
 
+    /// <summary>Creates a sequence handler using an explicit clock.</summary>
+    /// <param name="timeProvider">The clock used to enforce sequence timeouts.</param>
     public KeySequenceHandler(TimeProvider timeProvider)
     {
         _timeProvider = timeProvider ?? throw new ArgumentNullException(nameof(timeProvider));
@@ -201,6 +204,7 @@ public sealed class KeySequenceHandler : IKeyHandler, IDisposable
         ObjectDisposedException.ThrowIf(_isDisposed, this);
     }
 
+    /// <summary>Clears every sequence and prevents further registration.</summary>
     public void Dispose()
     {
         lock (_lockObject)
