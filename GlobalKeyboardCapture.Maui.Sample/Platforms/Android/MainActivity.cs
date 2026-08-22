@@ -9,6 +9,13 @@ namespace GlobalKeyboardCapture.MauiSample
     [Activity(Theme = "@style/Maui.SplashTheme", MainLauncher = true, LaunchMode = LaunchMode.SingleTop, ConfigurationChanges = ConfigChanges.ScreenSize | ConfigChanges.Orientation | ConfigChanges.UiMode | ConfigChanges.ScreenLayout | ConfigChanges.SmallestScreenSize | ConfigChanges.Density, WindowSoftInputMode = SoftInput.StateVisible | SoftInput.AdjustResize)]
     public class MainActivity : MauiAppCompatActivity
     {
+        public override void OnWindowFocusChanged(bool hasFocus)
+        {
+            base.OnWindowFocusChanged(hasFocus);
+
+            if (hasFocus)
+                Android.Util.Log.Info("GKC.Integration", "Focused");
+        }
 
         //public override bool DispatchKeyEvent(KeyEvent e)
         //{

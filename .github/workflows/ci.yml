@@ -131,9 +131,16 @@ jobs:
             adb logcat -c
             adb shell monkey -p com.companyname.globalkeyboardcapturemauisample 1
             timeout 60 sh -c 'until adb logcat -d -s GKC.Integration:I "*:S" | grep -F "Ready"; do sleep 1; done'
-            adb emu event send EV_KEY:KEY_F1:1 EV_SYN:0:0 EV_KEY:KEY_F1:0 EV_SYN:0:0
-            adb emu event send EV_KEY:KEY_F12:1 EV_SYN:0:0 EV_KEY:KEY_F12:0 EV_SYN:0:0
-            adb emu event send EV_KEY:KEY_KPENTER:1 EV_SYN:0:0 EV_KEY:KEY_KPENTER:0 EV_SYN:0:0
+            timeout 30 sh -c 'until adb logcat -d -s GKC.Integration:I "*:S" | grep -F "Focused"; do sleep 1; done'
+            adb emu event send EV_KEY:KEY_F1:1 EV_SYN:SYN_REPORT:0
+            sleep 0.1
+            adb emu event send EV_KEY:KEY_F1:0 EV_SYN:SYN_REPORT:0
+            adb emu event send EV_KEY:KEY_F12:1 EV_SYN:SYN_REPORT:0
+            sleep 0.1
+            adb emu event send EV_KEY:KEY_F12:0 EV_SYN:SYN_REPORT:0
+            adb emu event send EV_KEY:KEY_KPENTER:1 EV_SYN:SYN_REPORT:0
+            sleep 0.1
+            adb emu event send EV_KEY:KEY_KPENTER:0 EV_SYN:SYN_REPORT:0
             sleep 2
             adb logcat -d -v brief > android-keyboard.log
             grep -F 'Key=F1;NativeKeyCode=131' android-keyboard.log
