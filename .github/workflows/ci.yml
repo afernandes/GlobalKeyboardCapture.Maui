@@ -80,10 +80,10 @@ jobs:
         run: dotnet workload install ${{ matrix.workload }} --ignore-failed-sources
 
       - name: Build library
-        run: dotnet build GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -c Release -f ${{ matrix.tfm }}
+        run: dotnet build GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -c Release -f ${{ matrix.tfm }} -p:TargetFrameworks=${{ matrix.tfm }}
 
       - name: Build sample
-        run: dotnet build GlobalKeyboardCapture.Maui.Sample/GlobalKeyboardCapture.Maui.Sample.csproj -c Release -f ${{ matrix.tfm }}
+        run: dotnet build GlobalKeyboardCapture.Maui.Sample/GlobalKeyboardCapture.Maui.Sample.csproj -c Release -f ${{ matrix.tfm }} -p:TargetFrameworks=${{ matrix.tfm }}
 
   android-integration:
     name: Android key integration
@@ -106,7 +106,7 @@ jobs:
         run: dotnet workload install maui-android --ignore-failed-sources
 
       - name: Build Android sample APK
-        run: dotnet build GlobalKeyboardCapture.Maui.Sample/GlobalKeyboardCapture.Maui.Sample.csproj -c Release -f net10.0-android -p:AndroidPackageFormat=apk
+        run: dotnet build GlobalKeyboardCapture.Maui.Sample/GlobalKeyboardCapture.Maui.Sample.csproj -c Release -f net10.0-android -p:TargetFrameworks=net10.0-android -p:AndroidPackageFormat=apk
 
       - name: Inject hardware-key events
         uses: reactivecircus/android-emulator-runner@c9c93e6ba9c4194322e114c40970d5983d9a07cc # v2.38.0
