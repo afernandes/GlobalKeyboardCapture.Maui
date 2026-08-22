@@ -14,7 +14,7 @@ Este documento consolida o fechamento da linha 2.0 e o backlog recomendado para 
 | # | Prioridade | Estado | Item | Entrega sugerida |
 |---:|:---:|:---:|---|---|
 | 1 | P0 | ✅ | Matriz local completa de testes, builds, trimming e pacote 2.0 | 2.0.0 |
-| 2 | P0 | 🟡 | Executar e estabilizar todos os checks no PR | 2.0.0 |
+| 2 | P0 | ✅ | Executar e estabilizar todos os checks no PR | 2.0.0 |
 | 3 | P0 | 🟡 | Validar Android com teclado físico/scanner real | 2.0.0 |
 | 4 | P0 | 🟡 | Validar iPad e Mac físicos com teclado externo | 2.0.0 |
 | 5 | P0 | ⬜ | Publicar a versão 2.0.0 após merge e checks verdes | 2.0.0 |
@@ -48,7 +48,7 @@ A auditoria anterior levantou 19 itens. O estado consolidado é:
 | Multi-janela | ✅ | Windows suporta múltiplas janelas; Android faz rebind seguro da Activity; Apple usa teclado coalescido no app. |
 | iOS/Mac Catalyst | 🟡 | Implementado e compilado; falta validação em hardware Apple real. |
 | Eventos de `KeyUp` | ✅ | Opt-in em todas as plataformas, sem alterar o default histórico. |
-| Integração de plataforma no CI | 🟡 | Builds das quatro plataformas e injeção Android implementados; runtime Windows permanece como melhoria P1. |
+| Integração de plataforma no CI | ✅ | Builds das quatro plataformas e injeção Android validados; runtime Windows permanece como melhoria P1. |
 | Introspecção do serviço | ✅ | Estado, views, handlers, captura, diagnostics e scopes expostos. |
 | Handlers assíncronos | ✅ | Snapshot sem objeto nativo, cancelamento no disposal e isolamento de exceções. |
 | Changelog/versionamento | ✅ | `CHANGELOG.md`, política 1.x/2.x, notas de pacote e breaking changes documentados. |
