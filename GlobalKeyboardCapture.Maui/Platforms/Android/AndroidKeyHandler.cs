@@ -58,7 +58,7 @@ internal sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
         ArgumentNullException.ThrowIfNull(e);
         ThrowIfDisposed();
 
-        // Trusted system key-downs only. Use a BIT TEST instead of "Flags == FromSystem":
+        // Trusted system key events only. Use a BIT TEST instead of "Flags == FromSystem":
         // Flags is a bitfield and some keyboards set extra flags on function/numpad keys,
         // so exact equality silently dropped F1-F12 and the numpad Enter. Fallback events
         // are skipped to avoid double-processing (e.g. numpad keys with NumLock off, which

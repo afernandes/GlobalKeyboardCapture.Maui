@@ -39,9 +39,13 @@ internal sealed class KeyHandlerLifecycleHandler : ILifecycleHandler
                 return;
 
             var attachment = _keyHandlerService.AttachPlatformView(platformView);
-            NotifyCreated(platformView);
             _attachments.Add(platformView, attachment);
         }
+
+        // Observers can synchronously reenter the lifecycle handler. Publish the
+        // attachment first and notify outside the lock so a reentrant destroy can
+        // find and release the lease without extending this critical section.
+        NotifyCreated(platformView);
     }
 
     public void OnPlatformViewDestroyed(object platformView)
