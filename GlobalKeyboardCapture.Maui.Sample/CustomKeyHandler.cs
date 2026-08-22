@@ -11,7 +11,7 @@ public sealed class KeyDisplayHandler : IKeyHandler
     /// <summary>
     /// Raised when a key is captured.
     /// </summary>
-    public event EventHandler<string>? KeyPressed;
+    public event EventHandler<KeyEventArgs>? KeyPressed;
 
     public bool ShouldHandle(KeyEventArgs key) => true;
 
@@ -22,7 +22,7 @@ public sealed class KeyDisplayHandler : IKeyHandler
             "GKC.Integration",
             $"Key={key};NativeKeyCode={key.NativeKeyCode};Location={key.Location};EventType={key.EventType}");
 #endif
-        KeyPressed?.Invoke(this, key.ToString());
+        KeyPressed?.Invoke(this, key.CreateSnapshot());
     }
 }
 
