@@ -7,6 +7,7 @@ public sealed class KeyEventArgs
 {
     // Constants for string builder initial capacity
     private const int INITIAL_TOSTRING_CAPACITY = 32;
+    private KeyboardKey _typedKey;
 
     // Platform-specific event
     public object? PlatformEvent { get; set; }
@@ -16,11 +17,47 @@ public sealed class KeyEventArgs
     public char? Character { get; set; }
     public string? FunctionKey { get; set; }
 
+    /// <summary>
+    /// Gets or sets the platform-neutral logical key. Legacy key properties remain
+    /// synchronized when this property is assigned.
+    /// </summary>
+    public KeyboardKey Key
+    {
+        get => ResolveKeyboardKey();
+        set => ApplyKeyboardKey(value);
+    }
+
     // Modifier Keys
     public bool ControlKey { get; set; }
     public bool AltKey { get; set; }
     public bool ShiftKey { get; set; }
     public bool WindowsKey { get; set; }
+
+    /// <summary>
+    /// Gets or sets the active modifiers as flags.
+    /// </summary>
+    public KeyModifiers Modifiers
+    {
+        get
+        {
+            var modifiers = KeyModifiers.None;
+            if (ControlKey) modifiers |= KeyModifiers.Control;
+            if (AltKey) modifiers |= KeyModifiers.Alt;
+            if (ShiftKey) modifiers |= KeyModifiers.Shift;
+            if (WindowsKey) modifiers |= KeyModifiers.Meta;
+            return modifiers;
+        }
+        set
+        {
+            if ((value & ~KeyModifiers.All) != 0)
+                throw new ArgumentOutOfRangeException(nameof(value));
+
+            ControlKey = (value & KeyModifiers.Control) != 0;
+            AltKey = (value & KeyModifiers.Alt) != 0;
+            ShiftKey = (value & KeyModifiers.Shift) != 0;
+            WindowsKey = (value & KeyModifiers.Meta) != 0;
+        }
+    }
 
     // Navigation Keys
     public bool UpKey { get; set; }
@@ -139,6 +176,9 @@ public sealed class KeyEventArgs
         if (PauseBreakKey) AppendWithSeparator("PauseBreak");
         if (MenuKey) AppendWithSeparator("Menu");
 
+        if (!HasLegacyLogicalKey() && _typedKey != KeyboardKey.None)
+            AppendWithSeparator(KeyGesture.GetCanonicalKeyName(_typedKey));
+
         if (list.Length > 0)
             return list.ToString();
 
@@ -158,5 +198,128 @@ public sealed class KeyEventArgs
         }
 #endif
         return PlatformEvent?.ToString() ?? string.Empty;
+    }
+
+    private KeyboardKey ResolveKeyboardKey()
+    {
+        if (FunctionKey is not null && KeyGesture.TryParseFunctionKey(FunctionKey, out var functionKey))
+            return functionKey;
+        if (Character.HasValue)
+            return KeyboardKey.Character;
+        if (EnterKey) return KeyboardKey.Enter;
+        if (TabKey) return KeyboardKey.Tab;
+        if (BackspaceKey) return KeyboardKey.Backspace;
+        if (DeleteKey) return KeyboardKey.Delete;
+        if (EscapeKey) return KeyboardKey.Escape;
+        if (SpaceKey) return KeyboardKey.Space;
+        if (InsertKey) return KeyboardKey.Insert;
+        if (UpKey) return KeyboardKey.Up;
+        if (DownKey) return KeyboardKey.Down;
+        if (LeftKey) return KeyboardKey.Left;
+        if (RightKey) return KeyboardKey.Right;
+        if (HomeKey) return KeyboardKey.Home;
+        if (EndKey) return KeyboardKey.End;
+        if (PageUpKey) return KeyboardKey.PageUp;
+        if (PageDownKey) return KeyboardKey.PageDown;
+        if (CapsLockKey) return KeyboardKey.CapsLock;
+        if (NumLockKey) return KeyboardKey.NumLock;
+        if (ScrollLockKey) return KeyboardKey.ScrollLock;
+        if (PrintScreenKey) return KeyboardKey.PrintScreen;
+        if (PauseBreakKey) return KeyboardKey.PauseBreak;
+        if (MenuKey) return KeyboardKey.Menu;
+        return _typedKey;
+    }
+
+    private void ApplyKeyboardKey(KeyboardKey key)
+    {
+        ClearLogicalKey();
+        _typedKey = key;
+
+        if (key is >= KeyboardKey.F1 and <= KeyboardKey.F24)
+        {
+            FunctionKey = KeyGesture.GetCanonicalKeyName(key);
+            return;
+        }
+
+        switch (key)
+        {
+            case KeyboardKey.None:
+                break;
+            case KeyboardKey.Character:
+                throw new ArgumentException("Assign Character when setting a character key.", nameof(key));
+            case KeyboardKey.Enter: EnterKey = true; break;
+            case KeyboardKey.Tab: TabKey = true; break;
+            case KeyboardKey.Backspace: BackspaceKey = true; break;
+            case KeyboardKey.Delete: DeleteKey = true; break;
+            case KeyboardKey.Escape: EscapeKey = true; break;
+            case KeyboardKey.Space: SpaceKey = true; break;
+            case KeyboardKey.Insert: InsertKey = true; break;
+            case KeyboardKey.Up: UpKey = true; break;
+            case KeyboardKey.Down: DownKey = true; break;
+            case KeyboardKey.Left: LeftKey = true; break;
+            case KeyboardKey.Right: RightKey = true; break;
+            case KeyboardKey.Home: HomeKey = true; break;
+            case KeyboardKey.End: EndKey = true; break;
+            case KeyboardKey.PageUp: PageUpKey = true; break;
+            case KeyboardKey.PageDown: PageDownKey = true; break;
+            case KeyboardKey.CapsLock: CapsLockKey = true; break;
+            case KeyboardKey.NumLock: NumLockKey = true; break;
+            case KeyboardKey.ScrollLock: ScrollLockKey = true; break;
+            case KeyboardKey.PrintScreen: PrintScreenKey = true; break;
+            case KeyboardKey.PauseBreak: PauseBreakKey = true; break;
+            case KeyboardKey.Menu: MenuKey = true; break;
+        }
+    }
+
+    private bool HasLegacyLogicalKey() =>
+        FunctionKey is not null
+        || Character.HasValue
+        || EnterKey
+        || TabKey
+        || BackspaceKey
+        || DeleteKey
+        || EscapeKey
+        || SpaceKey
+        || InsertKey
+        || UpKey
+        || DownKey
+        || LeftKey
+        || RightKey
+        || HomeKey
+        || EndKey
+        || PageUpKey
+        || PageDownKey
+        || CapsLockKey
+        || NumLockKey
+        || ScrollLockKey
+        || PrintScreenKey
+        || PauseBreakKey
+        || MenuKey;
+
+    private void ClearLogicalKey()
+    {
+        Character = null;
+        FunctionKey = null;
+        EnterKey = false;
+        TabKey = false;
+        BackspaceKey = false;
+        DeleteKey = false;
+        EscapeKey = false;
+        SpaceKey = false;
+        InsertKey = false;
+        UpKey = false;
+        DownKey = false;
+        LeftKey = false;
+        RightKey = false;
+        HomeKey = false;
+        EndKey = false;
+        PageUpKey = false;
+        PageDownKey = false;
+        CapsLockKey = false;
+        NumLockKey = false;
+        ScrollLockKey = false;
+        PrintScreenKey = false;
+        PauseBreakKey = false;
+        MenuKey = false;
     }
 }

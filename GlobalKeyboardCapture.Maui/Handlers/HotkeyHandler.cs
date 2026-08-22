@@ -1,239 +1,135 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 using GlobalKeyboardCapture.Maui.Core.Interfaces;
 using GlobalKeyboardCapture.Maui.Core.Models;
 
 namespace GlobalKeyboardCapture.Maui.Handlers;
 
+/// <summary>
+/// Dispatches normalized key gestures to actions on the MAUI main thread.
+/// </summary>
 public sealed class HotkeyHandler : IKeyHandler
 {
     private const int INITIAL_HOTKEY_CAPACITY = 16;
-    private const char SEPARATOR = '+';
 
-    private static readonly HashSet<string> EscapeKeyAliases = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "ESC",
-        "ESCAPE"
-    };
-
-    private static readonly Dictionary<string, Action<KeyEventArgs>> NamedKeySetters = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["Enter"] = k => k.EnterKey = true,
-        ["Return"] = k => k.EnterKey = true,
-        ["Tab"] = k => k.TabKey = true,
-        ["Backspace"] = k => k.BackspaceKey = true,
-        ["Delete"] = k => k.DeleteKey = true,
-        ["Del"] = k => k.DeleteKey = true,
-        ["Space"] = k => k.SpaceKey = true,
-        ["Insert"] = k => k.InsertKey = true,
-        ["Ins"] = k => k.InsertKey = true,
-        ["Up"] = k => k.UpKey = true,
-        ["Down"] = k => k.DownKey = true,
-        ["Left"] = k => k.LeftKey = true,
-        ["Right"] = k => k.RightKey = true,
-        ["Home"] = k => k.HomeKey = true,
-        ["End"] = k => k.EndKey = true,
-        ["PageUp"] = k => k.PageUpKey = true,
-        ["PgUp"] = k => k.PageUpKey = true,
-        ["PageDown"] = k => k.PageDownKey = true,
-        ["PgDn"] = k => k.PageDownKey = true,
-        ["CapsLock"] = k => k.CapsLockKey = true,
-        ["NumLock"] = k => k.NumLockKey = true,
-        ["ScrollLock"] = k => k.ScrollLockKey = true,
-        ["PrintScreen"] = k => k.PrintScreenKey = true,
-        ["PrtSc"] = k => k.PrintScreenKey = true,
-        ["PauseBreak"] = k => k.PauseBreakKey = true,
-        ["Pause"] = k => k.PauseBreakKey = true,
-        ["Menu"] = k => k.MenuKey = true,
-    };
-
-    // Ordered array of modifiers for consistent normalization
-    private static readonly string[] ModifierOrder = ["Ctrl", "Alt", "Shift", "Win"];
-
-    // Common aliases for modifiers
-    private static readonly Dictionary<string, string> ModifierAliases = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["Control"] = "Ctrl",
-        ["Windows"] = "Win"
-    };
-
-    // Canonical aliases for the main (non-modifier) key, mirroring the names that
-    // KeyEventArgs.ToString() emits. Only aliases whose characters differ from the
-    // canonical form need mapping (case is handled by the OrdinalIgnoreCase dictionary).
-    // Keep this in sync with KeyEventArgs.ToString() and NamedKeySetters.
-    private static readonly Dictionary<string, string> KeyAliases = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ["Escape"] = "Esc",
-        ["Return"] = "Enter",
-        ["Del"] = "Delete",
-        ["Ins"] = "Insert",
-        ["PgUp"] = "PageUp",
-        ["PgDn"] = "PageDown",
-        ["PrtSc"] = "PrintScreen",
-        ["Pause"] = "PauseBreak"
-    };
-
-    private readonly Dictionary<string, Action> _hotkeyActions;
+    private readonly Dictionary<KeyGesture, HotkeyRegistration> _hotkeys = new(INITIAL_HOTKEY_CAPACITY);
     private readonly object _hotkeysLock = new();
+    private long _nextRegistrationId;
 
-    public HotkeyHandler()
+    /// <summary>
+    /// Gets the number of currently registered hotkeys.
+    /// </summary>
+    public int HotkeyCount
     {
-        _hotkeyActions = new Dictionary<string, Action>(
-            INITIAL_HOTKEY_CAPACITY,
-            StringComparer.OrdinalIgnoreCase);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static string NormalizeHotkey(string hotkey)
-    {
-        if (string.IsNullOrWhiteSpace(hotkey)) return string.Empty;
-
-        // Split and trim the parts
-        var parts = hotkey.Split(SEPARATOR, StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length == 0) return string.Empty;
-        // A lone key still needs canonicalization (e.g. "Escape" -> "Esc") so the
-        // string API resolves to the same slot KeyEventArgs.ToString() produces.
-        if (parts.Length == 1) return CanonicalizeKey(parts[0]);
-
-        // Identify modifiers and main key
-        var modifiers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var mainKey = string.Empty;
-
-        foreach (var part in parts)
+        get
         {
-            var normalizedPart = ModifierAliases.GetValueOrDefault(part, part);
-
-            if (ModifierOrder.Contains(normalizedPart, StringComparer.OrdinalIgnoreCase))
+            lock (_hotkeysLock)
             {
-                modifiers.Add(normalizedPart);
-            }
-            else
-            {
-                if (!string.IsNullOrEmpty(mainKey))
-                    throw new ArgumentException("A hotkey must contain exactly one main key.", nameof(hotkey));
-                mainKey = CanonicalizeKey(normalizedPart);
+                return _hotkeys.Count;
             }
         }
-
-        // Build the normalized hotkey string
-        var orderedModifiers = ModifierOrder.Where(m => modifiers.Contains(m));
-
-        return string.IsNullOrEmpty(mainKey)
-            ? string.Join(SEPARATOR, orderedModifiers)
-            : $"{string.Join(SEPARATOR, orderedModifiers)}{SEPARATOR}{mainKey}";
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static string CanonicalizeKey(string key)
+    /// <summary>
+    /// Gets a snapshot of currently registered gestures.
+    /// </summary>
+    public IReadOnlyCollection<KeyGesture> RegisteredHotkeys
     {
-        if (key.Length > 1 && (key[0] == 'F' || key[0] == 'f') && !TryParseFunctionKey(key, out _))
-            throw new ArgumentException($"Invalid function key '{key}'. Supported values are F1 through F24.", nameof(key));
-
-        return KeyAliases.GetValueOrDefault(key, key);
+        get
+        {
+            lock (_hotkeysLock)
+            {
+                return _hotkeys.Keys.ToArray();
+            }
+        }
     }
 
-    public void RegisterHotkey(string key, bool requireControl, bool requireAlt, bool requireShift, Action action)
+    /// <summary>
+    /// Registers a key and legacy modifier flags.
+    /// </summary>
+    public IDisposable RegisterHotkey(
+        string key,
+        bool requireControl,
+        bool requireAlt,
+        bool requireShift,
+        Action action)
     {
         ArgumentException.ThrowIfNullOrEmpty(key);
         ArgumentNullException.ThrowIfNull(action);
 
-        var hotKey = new KeyEventArgs
-        {
-            ControlKey = requireControl,
-            AltKey = requireAlt,
-            ShiftKey = requireShift
-        };
+        var gesture = ParseGesture(key, nameof(key));
+        var modifiers = gesture.Modifiers;
+        if (requireControl) modifiers |= KeyModifiers.Control;
+        if (requireAlt) modifiers |= KeyModifiers.Alt;
+        if (requireShift) modifiers |= KeyModifiers.Shift;
 
-        if (!TryProcessSpecialKey(key, hotKey))
-        {
-            // Fail loud on unrecognized multi-char input instead of silently taking the
-            // first character (e.g. "Enterr" would otherwise register under 'E').
-            if (key.Length != 1)
-                throw new ArgumentException(
-                    $"Unrecognized hotkey key '{key}'. Use a single character, a function key (F1-F12), Esc, or a known named key (Enter, Tab, Space, arrows, etc.).",
-                    nameof(key));
-            hotKey.Character = key[0];
-        }
-
-        RegisterHotkey(hotKey, action);
+        gesture = gesture.Key == KeyboardKey.Character
+            ? new KeyGesture(gesture.Character!.Value, modifiers)
+            : new KeyGesture(gesture.Key, modifiers);
+        return RegisterHotkey(gesture, action);
     }
 
-    public void RegisterHotkey(KeyEventArgs hotKey, Action action)
+    /// <summary>
+    /// Registers a gesture represented by an existing keyboard event.
+    /// </summary>
+    public IDisposable RegisterHotkey(KeyEventArgs hotKey, Action action)
     {
         ArgumentNullException.ThrowIfNull(hotKey);
-        ArgumentNullException.ThrowIfNull(action);
-        lock (_hotkeysLock)
-        {
-            _hotkeyActions[hotKey.ToString()] = action;
-        }
+        return RegisterHotkey(KeyGesture.FromEvent(hotKey), action);
     }
 
     /// <summary>
-    /// Registers a global hotkey with its associated action. The hotkey string is automatically normalized 
-    /// to ensure consistent behavior regardless of the order of modifiers.
+    /// Registers a textual gesture. Modifier order and supported aliases are normalized.
     /// </summary>
-    /// <param name="hotKey">
-    /// A string representing the hotkey combination (e.g., "Ctrl+Shift+X", "Alt+Win+Z").
-    /// Modifiers can be specified in any order and are automatically normalized.
-    /// Supported modifiers: Ctrl (or Control), Alt, Shift, Win (or Windows).
-    /// Special keys like function keys (F1-F12), Escape (or Esc) and OEM are also supported.
-    /// </param>
-    /// <param name="action">
-    /// The action to be executed when the hotkey is triggered. This action will be invoked
-    /// on the main thread.
-    /// </param>
-    /// <remarks>
-    /// The hotkey string is normalized following these rules:
-    /// <list type="bullet">
-    /// <item><description>Modifiers are ordered as: Ctrl → Alt → Shift → Win</description></item>
-    /// <item><description>Common aliases are supported (e.g., "Control" → "Ctrl", "Windows" → "Win")</description></item>
-    /// <item><description>The comparison is case-insensitive</description></item>
-    /// <item><description>Extra spaces and empty parts are removed</description></item>
-    /// </list>
-    /// Examples of equivalent hotkey registrations:
-    /// <code>
-    /// RegisterHotkey("Shift+Alt+X", action);   // Normalized to "Alt+Shift+X"
-    /// RegisterHotkey("Alt+Shift+X", action);   // Already normalized
-    /// RegisterHotkey("X+Shift+Alt", action);   // Normalized to "Alt+Shift+X"
-    /// </code>
-    /// </remarks>
-    /// <exception cref="ArgumentException">Thrown when <paramref name="hotKey"/> is null or empty.</exception>
-    /// <exception cref="ArgumentNullException">Thrown when <paramref name="action"/> is null.</exception>
-    public void RegisterHotkey(string hotKey, Action action)
+    public IDisposable RegisterHotkey(string hotKey, Action action)
     {
         ArgumentException.ThrowIfNullOrEmpty(hotKey);
+        return RegisterHotkey(ParseGesture(hotKey, nameof(hotKey)), action);
+    }
+
+    /// <summary>
+    /// Registers a typed gesture and returns an idempotent token that removes exactly
+    /// that registration when disposed.
+    /// </summary>
+    public IDisposable RegisterHotkey(KeyGesture hotKey, Action action)
+    {
         ArgumentNullException.ThrowIfNull(action);
+        if (hotKey.Key == KeyboardKey.None)
+            throw new ArgumentException("A hotkey must contain a logical key.", nameof(hotKey));
 
         lock (_hotkeysLock)
         {
-            _hotkeyActions[NormalizeHotkey(hotKey)] = action;
+            var registration = new HotkeyRegistration(++_nextRegistrationId, action);
+            _hotkeys[hotKey] = registration;
+            return new HotkeyRegistrationToken(this, hotKey, registration.Id);
         }
     }
 
     /// <summary>
-    /// Removes a hotkey previously registered via the string overload.
-    /// The lookup uses the same normalization, so modifier order and aliases are
-    /// honored ("Control+Shift+X" matches a registration of "Shift+Ctrl+X").
+    /// Removes a textual hotkey registration.
     /// </summary>
-    /// <returns><c>true</c> if a hotkey was removed; <c>false</c> if no match was registered.</returns>
     public bool UnregisterHotkey(string hotKey)
     {
         ArgumentException.ThrowIfNullOrEmpty(hotKey);
-        lock (_hotkeysLock)
-        {
-            return _hotkeyActions.Remove(NormalizeHotkey(hotKey));
-        }
+        return UnregisterHotkey(ParseGesture(hotKey, nameof(hotKey)));
     }
 
     /// <summary>
-    /// Removes a hotkey previously registered via the <see cref="KeyEventArgs"/> overload.
+    /// Removes a hotkey represented by a keyboard event.
     /// </summary>
-    /// <returns><c>true</c> if a hotkey was removed; <c>false</c> if no match was registered.</returns>
     public bool UnregisterHotkey(KeyEventArgs hotKey)
     {
         ArgumentNullException.ThrowIfNull(hotKey);
+        return UnregisterHotkey(KeyGesture.FromEvent(hotKey));
+    }
+
+    /// <summary>
+    /// Removes a typed hotkey.
+    /// </summary>
+    public bool UnregisterHotkey(KeyGesture hotKey)
+    {
         lock (_hotkeysLock)
         {
-            return _hotkeyActions.Remove(hotKey.ToString());
+            return _hotkeys.Remove(hotKey);
         }
     }
 
@@ -244,40 +140,32 @@ public sealed class HotkeyHandler : IKeyHandler
     {
         lock (_hotkeysLock)
         {
-            _hotkeyActions.Clear();
+            _hotkeys.Clear();
         }
     }
 
+    /// <inheritdoc />
     public void HandleKey(KeyEventArgs key)
     {
         ArgumentNullException.ThrowIfNull(key);
+        if (!KeyGesture.TryFromEvent(key, out var gesture))
+            return;
 
-        Action? action;
+        Action? action = null;
         lock (_hotkeysLock)
         {
-            _hotkeyActions.TryGetValue(key.ToString(), out action);
+            if (_hotkeys.TryGetValue(gesture, out var registration))
+                action = registration.Action;
         }
 
-        if (action is not null)
-        {
-            MainThread.BeginInvokeOnMainThread(() =>
-            {
-                try
-                {
-                    action();
-                }
-                catch (Exception ex)
-                {
-                    // Hotkey actions are user code; isolate exceptions so a misbehaving
-                    // handler does not crash the UI thread. Service ILogger is not
-                    // reachable from here, so trace and continue.
-                    System.Diagnostics.Debug.WriteLine($"[GlobalKeyboardCapture] Hotkey action threw: {ex}");
-                }
-            });
-            key.Handled = true;
-        }
+        if (action is null)
+            return;
+
+        MainThread.BeginInvokeOnMainThread(() => InvokeSafely(action));
+        key.Handled = true;
     }
 
+    /// <inheritdoc />
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool ShouldHandle(KeyEventArgs key)
     {
@@ -285,48 +173,58 @@ public sealed class HotkeyHandler : IKeyHandler
         return true;
     }
 
-    private static bool TryProcessSpecialKey(string key, KeyEventArgs hotKey)
+    private static KeyGesture ParseGesture(string value, string parameterName)
     {
-        return IsFunctionKey(key, hotKey) || IsEscapeKey(key, hotKey) || IsNamedKey(key, hotKey);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsNamedKey(string key, KeyEventArgs hotKey)
-    {
-        if (!NamedKeySetters.TryGetValue(key, out var setter))
-            return false;
-
-        setter(hotKey);
-        return true;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsFunctionKey(ReadOnlySpan<char> key, KeyEventArgs hotKey)
-    {
-        if (TryParseFunctionKey(key, out var functionNumber))
+        try
         {
-            hotKey.FunctionKey = $"F{functionNumber}";
-            return true;
+            return KeyGesture.Parse(value);
         }
-        return false;
+        catch (FormatException exception)
+        {
+            throw new ArgumentException(exception.Message, parameterName, exception);
+        }
     }
 
-    private static bool TryParseFunctionKey(ReadOnlySpan<char> key, out int functionNumber)
+    private static void InvokeSafely(Action action)
     {
-        functionNumber = 0;
-        return key.Length is 2 or 3
-            && (key[0] == 'F' || key[0] == 'f')
-            && int.TryParse(key[1..], out functionNumber)
-            && functionNumber is >= 1 and <= 24;
+        try
+        {
+            action();
+        }
+        catch (Exception exception)
+        {
+            // User actions run outside input-thread dispatch and must not crash the UI loop.
+            System.Diagnostics.Debug.WriteLine($"[GlobalKeyboardCapture] Hotkey action threw: {exception}");
+        }
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsEscapeKey(string key, KeyEventArgs hotKey)
+    private void UnregisterHotkey(KeyGesture gesture, long registrationId)
     {
-        if (!EscapeKeyAliases.Contains(key))
-            return false;
+        lock (_hotkeysLock)
+        {
+            if (_hotkeys.TryGetValue(gesture, out var current) && current.Id == registrationId)
+                _hotkeys.Remove(gesture);
+        }
+    }
 
-        hotKey.EscapeKey = true;
-        return true;
+    private sealed record HotkeyRegistration(long Id, Action Action);
+
+    private sealed class HotkeyRegistrationToken : IDisposable
+    {
+        private HotkeyHandler? _owner;
+        private readonly KeyGesture _gesture;
+        private readonly long _registrationId;
+
+        public HotkeyRegistrationToken(HotkeyHandler owner, KeyGesture gesture, long registrationId)
+        {
+            _owner = owner;
+            _gesture = gesture;
+            _registrationId = registrationId;
+        }
+
+        public void Dispose()
+        {
+            Interlocked.Exchange(ref _owner, null)?.UnregisterHotkey(_gesture, _registrationId);
+        }
     }
 }
