@@ -118,7 +118,7 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
-      - name: Inject hardware-key events
+      - name: Inject Android keyboard events
         uses: reactivecircus/android-emulator-runner@c9c93e6ba9c4194322e114c40970d5983d9a07cc # v2.38.0
         with:
           api-level: 35
@@ -132,15 +132,9 @@ jobs:
             adb shell monkey -p com.companyname.globalkeyboardcapturemauisample 1
             timeout 60 sh -c 'until adb logcat -d -s GKC.Integration:I "*:S" | grep -F "Ready;Views=1"; do sleep 1; done'
             timeout 30 sh -c 'until adb logcat -d -s GKC.Integration:I "*:S" | grep -F "Focused"; do sleep 1; done'
-            adb emu event send EV_KEY:KEY_F1:1 EV_SYN:0:0
-            sleep 0.1
-            adb emu event send EV_KEY:KEY_F1:0 EV_SYN:0:0
-            adb emu event send EV_KEY:KEY_F12:1 EV_SYN:0:0
-            sleep 0.1
-            adb emu event send EV_KEY:KEY_F12:0 EV_SYN:0:0
-            adb emu event send EV_KEY:KEY_KPENTER:1 EV_SYN:0:0
-            sleep 0.1
-            adb emu event send EV_KEY:KEY_KPENTER:0 EV_SYN:0:0
+            adb shell input keyboard keyevent 131
+            adb shell input keyboard keyevent 142
+            adb shell input keyboard keyevent 160
             sleep 2
             adb logcat -d -v brief > android-keyboard.log
             grep -F 'Key=F1;NativeKeyCode=131' android-keyboard.log

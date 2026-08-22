@@ -37,7 +37,7 @@ No changes yet.
 
 ### Fixed
 
-- Android function keys and numpad Enter no longer fail when native events include additional flag bits.
+- Android function keys and numpad Enter no longer fail because of native flag combinations; window-scoped keyboard events no longer require `FLAG_FROM_SYSTEM`.
 - Held Android keys no longer flood hotkeys or scanner buffers unless repeat capture is enabled.
 - Windows capture waits for window content, tracks the exact subscribed element, and cleans up symmetrically.
 - Android callback chaining survives Activity recreation and wrappers installed by other libraries.

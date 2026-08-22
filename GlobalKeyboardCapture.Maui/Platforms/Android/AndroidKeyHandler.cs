@@ -15,7 +15,6 @@ namespace GlobalKeyboardCapture.Maui;
 internal sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
 {
     private const KeyEventActions KEY_ACTION_DOWN = KeyEventActions.Down;
-    private const KeyEventFlags KEY_FLAGS_FROM_SYSTEM = KeyEventFlags.FromSystem;
 
     private readonly object _lockObject = new();
     private readonly ConcurrentDictionary<int, KeyboardDeviceInfo> _deviceCache = new();
@@ -58,11 +57,11 @@ internal sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
         ArgumentNullException.ThrowIfNull(e);
         ThrowIfDisposed();
 
-        // Trusted system key events only. Use a BIT TEST instead of "Flags == FromSystem":
-        // Flags is a bitfield and some keyboards set extra flags on function/numpad keys,
-        // so exact equality silently dropped F1-F12 and the numpad Enter. Fallback events
-        // are skipped to avoid double-processing (e.g. numpad keys with NumLock off, which
-        // the system re-emits as DPAD/Move keys).
+        // Window.Callback is already scoped to this application window. Do not require
+        // FLAG_FROM_SYSTEM here: Android's supported input-injection path emits keyboard
+        // events without that flag, and some vendor input stacks do the same. Fallback
+        // events are still skipped to avoid double-processing (e.g. numpad keys with
+        // NumLock off, which the system re-emits as DPAD/Move keys).
         if (e.Action is not (KeyEventActions.Down or KeyEventActions.Up))
         {
             ReportDiagnostic(e, null, KeyboardDiagnosticStage.Ignored, "Only key-down and key-up events are supported.");
@@ -71,11 +70,6 @@ internal sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
         if (e.Action == KeyEventActions.Up && !_options.CaptureKeyUp)
         {
             ReportDiagnostic(e, null, KeyboardDiagnosticStage.Ignored, "Key-up events are disabled.");
-            return false;
-        }
-        if ((e.Flags & KEY_FLAGS_FROM_SYSTEM) != KEY_FLAGS_FROM_SYSTEM)
-        {
-            ReportDiagnostic(e, null, KeyboardDiagnosticStage.Ignored, "Event is not marked as system input.");
             return false;
         }
         if ((e.Flags & KeyEventFlags.Fallback) == KeyEventFlags.Fallback)
