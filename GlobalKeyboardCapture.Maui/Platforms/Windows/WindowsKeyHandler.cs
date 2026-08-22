@@ -13,6 +13,7 @@ public class WindowsKeyHandler : IPlatformKeyHandler
     private Microsoft.UI.Xaml.Window? _window;
     private Microsoft.UI.Xaml.UIElement? _subscribedContent;
     private Action<KeyEventArgs>? _onKeyPressed;
+    private Action<Core.Models.KeyboardDiagnosticEventArgs>? _onDiagnostic;
 
     readonly Func<VirtualKey, CoreVirtualKeyStates> GetKeyState;
     
@@ -24,6 +25,12 @@ public class WindowsKeyHandler : IPlatformKeyHandler
     public void ConfigureHandler(Action<KeyEventArgs> onKeyPressed)
     {
         _onKeyPressed = onKeyPressed;
+    }
+
+    public void ConfigureDiagnostics(Action<Core.Models.KeyboardDiagnosticEventArgs> onDiagnostic)
+    {
+        ArgumentNullException.ThrowIfNull(onDiagnostic);
+        _onDiagnostic = onDiagnostic;
     }
 
     public void Initialize(object platformView)
@@ -82,6 +89,16 @@ public class WindowsKeyHandler : IPlatformKeyHandler
 
         var keyEvent = new Core.Models.KeyEventArgs
         {
+            Platform = Core.Models.KeyboardPlatform.Windows,
+            EventType = Core.Models.KeyboardEventType.KeyDown,
+            Location = GetKeyLocation(args.Key),
+            NativeKeyCode = (int)args.Key,
+            NativeScanCode = (int)args.KeyStatus.ScanCode,
+            NativeFlags = _onDiagnostic is null
+                ? null
+                : $"Extended={args.KeyStatus.IsExtendedKey};Menu={args.KeyStatus.IsMenuKeyDown};WasDown={args.KeyStatus.WasKeyDown}",
+            RepeatCount = (int)args.KeyStatus.RepeatCount,
+
             // Modifiers
             ControlKey = (GetKeyState(VirtualKey.Control) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down,
             AltKey = (GetKeyState(VirtualKey.Menu) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down,
@@ -136,5 +153,16 @@ public class WindowsKeyHandler : IPlatformKeyHandler
     {
         Unsubscribe();
         _window = null;
+    }
+
+    private static Core.Models.KeyLocation GetKeyLocation(VirtualKey key)
+    {
+        if (key is >= VirtualKey.NumberPad0 and <= VirtualKey.Divide)
+            return Core.Models.KeyLocation.Numpad;
+        if (key is VirtualKey.LeftControl or VirtualKey.LeftMenu or VirtualKey.LeftShift or VirtualKey.LeftWindows)
+            return Core.Models.KeyLocation.Left;
+        if (key is VirtualKey.RightControl or VirtualKey.RightMenu or VirtualKey.RightShift or VirtualKey.RightWindows)
+            return Core.Models.KeyLocation.Right;
+        return Core.Models.KeyLocation.Standard;
     }
 }

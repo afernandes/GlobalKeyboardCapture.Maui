@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using System.Collections.Concurrent;
 using Android.Views;
 using GlobalKeyboardCapture.Maui.Core.Interfaces;
 using GlobalKeyboardCapture.Maui.Core.Models;
@@ -14,7 +15,9 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
     private const KeyEventFlags KEY_FLAGS_FROM_SYSTEM = KeyEventFlags.FromSystem;
 
     private readonly object _lockObject = new();
+    private readonly ConcurrentDictionary<int, KeyboardDeviceInfo> _deviceCache = new();
     private Action<KeyEventArgs>? _onKeyPressed;
+    private Action<KeyboardDiagnosticEventArgs>? _onDiagnostic;
     private Activity? _activity;
     private IWindowCallback? _originalDispatcher;
     private KeyEventCallback? _installedCallback;
@@ -24,6 +27,12 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
     {
         ArgumentNullException.ThrowIfNull(onKeyPressed);
         _onKeyPressed = onKeyPressed;
+    }
+
+    public void ConfigureDiagnostics(Action<KeyboardDiagnosticEventArgs> onDiagnostic)
+    {
+        ArgumentNullException.ThrowIfNull(onDiagnostic);
+        _onDiagnostic = onDiagnostic;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -38,20 +47,33 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
         // are skipped to avoid double-processing (e.g. numpad keys with NumLock off, which
         // the system re-emits as DPAD/Move keys).
         if (e.Action != KEY_ACTION_DOWN)
+        {
+            ReportDiagnostic(e, null, KeyboardDiagnosticStage.Ignored, "Only key-down events are enabled.");
             return false;
+        }
         if ((e.Flags & KEY_FLAGS_FROM_SYSTEM) != KEY_FLAGS_FROM_SYSTEM)
+        {
+            ReportDiagnostic(e, null, KeyboardDiagnosticStage.Ignored, "Event is not marked as system input.");
             return false;
+        }
         if ((e.Flags & KeyEventFlags.Fallback) == KeyEventFlags.Fallback)
+        {
+            ReportDiagnostic(e, null, KeyboardDiagnosticStage.Ignored, "Fallback event suppressed to prevent duplicate input.");
             return false;
+        }
         // Ignore auto-repeat from a held key: Android streams ACTION_DOWN with an
         // incrementing RepeatCount, which would otherwise re-fire a held hotkey dozens
         // of times per second and flood the barcode buffer. Distinct keystrokes (and
         // barcode-scanner output) arrive as RepeatCount == 0, so this only drops repeats.
         if (e.RepeatCount > 0)
+        {
+            ReportDiagnostic(e, null, KeyboardDiagnosticStage.Ignored, "Auto-repeat is disabled.");
             return false;
+        }
 
         var keyEvent = CreateKeyEventArgs(e);
         ProcessKeyEvent(keyEvent, e);
+        _onKeyPressed?.Invoke(keyEvent);
 
         return keyEvent.Handled;
     }
@@ -106,10 +128,19 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static KeyEventArgs CreateKeyEventArgs(KeyEvent e)
+    private KeyEventArgs CreateKeyEventArgs(KeyEvent e)
     {
-        return new KeyEventArgs
+        var keyEvent = new KeyEventArgs
         {
+            Platform = KeyboardPlatform.Android,
+            EventType = KeyboardEventType.KeyDown,
+            Location = IsNumpadKey(e.KeyCode) ? KeyLocation.Numpad : KeyLocation.Standard,
+            NativeKeyCode = (int)e.KeyCode,
+            NativeScanCode = e.ScanCode,
+            NativeFlags = _onDiagnostic is null ? null : e.Flags.ToString(),
+            RepeatCount = e.RepeatCount,
+            Device = GetDeviceInfo(e),
+
             // Modifiers
             ControlKey = e.IsCtrlPressed,
             AltKey = e.IsAltPressed,
@@ -144,6 +175,26 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
             MenuKey = e.KeyCode == Keycode.Menu,
             PlatformEvent = e
         };
+
+        if (keyEvent.Key == KeyboardKey.None)
+        {
+            keyEvent.Key = e.KeyCode switch
+            {
+                Keycode.VolumeUp => KeyboardKey.VolumeUp,
+                Keycode.VolumeDown => KeyboardKey.VolumeDown,
+                Keycode.VolumeMute => KeyboardKey.VolumeMute,
+                Keycode.Back => KeyboardKey.Back,
+                Keycode.Forward => KeyboardKey.Forward,
+                Keycode.Search => KeyboardKey.Search,
+                Keycode.MediaPlayPause => KeyboardKey.MediaPlayPause,
+                Keycode.MediaStop => KeyboardKey.MediaStop,
+                Keycode.MediaNext => KeyboardKey.MediaNext,
+                Keycode.MediaPrevious => KeyboardKey.MediaPrevious,
+                _ => KeyboardKey.None
+            };
+        }
+
+        return keyEvent;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -175,8 +226,50 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
             keyEvent.Character = KeyboardHelper.ToChar(e.DisplayLabel);
         }
 
-        _onKeyPressed?.Invoke(keyEvent);
     }
+
+    private KeyboardDeviceInfo? GetDeviceInfo(KeyEvent keyEvent)
+    {
+        if (keyEvent.DeviceId < 0)
+            return null;
+
+        return _deviceCache.GetOrAdd(keyEvent.DeviceId, static (_, nativeEvent) =>
+        {
+            var device = nativeEvent.Device;
+            return new KeyboardDeviceInfo(
+                nativeEvent.DeviceId,
+                device?.Name,
+                device?.IsVirtual ?? false,
+                OperatingSystem.IsAndroidVersionAtLeast(29) && device?.IsExternal == true,
+                device?.Descriptor);
+        }, keyEvent);
+    }
+
+    private void ReportDiagnostic(
+        KeyEvent nativeEvent,
+        KeyEventArgs? normalizedEvent,
+        KeyboardDiagnosticStage stage,
+        string? reason)
+    {
+        var diagnostic = _onDiagnostic;
+        if (diagnostic is null)
+            return;
+
+        diagnostic(new KeyboardDiagnosticEventArgs(
+            stage,
+            KeyboardPlatform.Android,
+            normalizedEvent?.ToString(),
+            (int)nativeEvent.KeyCode,
+            nativeEvent.ScanCode,
+            nativeEvent.Action.ToString(),
+            nativeEvent.Flags.ToString(),
+            nativeEvent.RepeatCount,
+            GetDeviceInfo(nativeEvent),
+            reason));
+    }
+
+    private static bool IsNumpadKey(Keycode keyCode) => keyCode is
+        >= Keycode.Numpad0 and <= Keycode.NumpadRightParen;
 
     private void ThrowIfDisposed()
     {

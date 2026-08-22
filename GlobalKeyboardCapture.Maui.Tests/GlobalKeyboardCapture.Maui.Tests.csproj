@@ -22,11 +22,17 @@
   -->
   <ItemGroup>
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyEventArgs.cs" Link="Linked\KeyEventArgs.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyboardDeviceInfo.cs" Link="Linked\KeyboardDeviceInfo.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyboardDiagnosticEventArgs.cs" Link="Linked\KeyboardDiagnosticEventArgs.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyboardEventType.cs" Link="Linked\KeyboardEventType.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyboardKey.cs" Link="Linked\KeyboardKey.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyboardPlatform.cs" Link="Linked\KeyboardPlatform.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyGesture.cs" Link="Linked\KeyGesture.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyLocation.cs" Link="Linked\KeyLocation.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyModifiers.cs" Link="Linked\KeyModifiers.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IKeyHandler.cs" Link="Linked\IKeyHandler.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IKeyHandlerService.cs" Link="Linked\IKeyHandlerService.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IKeyboardCaptureScope.cs" Link="Linked\IKeyboardCaptureScope.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IPlatformKeyHandler.cs" Link="Linked\IPlatformKeyHandler.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Services\KeyHandlerService.cs" Link="Linked\KeyHandlerService.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Configuration\KeyHandlerOptions.cs" Link="Linked\KeyHandlerOptions.cs" />

@@ -20,4 +20,10 @@ public class KeyHandlerOptions
     /// regardless of consumption.
     /// </summary>
     public bool StopOnHandled { get; set; }
+
+    /// <summary>
+    /// Enables structured native/normalized keyboard diagnostics. Disabled by default
+    /// so the input hot path performs no diagnostic string formatting.
+    /// </summary>
+    public bool EnableDiagnostics { get; set; }
 }

@@ -17,9 +17,13 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
     private readonly IPlatformKeyHandler _platformHandler;
     private readonly ILogger<KeyHandlerService> _logger;
     private readonly KeyHandlerOptions _options;
+    private readonly HashSet<long> _activeSuspensions = [];
     private object? _boundPlatformView;
     private long _nextRegistrationId;
+    private long _nextSuspensionId;
     private bool _isDisposed;
+
+    public event EventHandler<KeyboardDiagnosticEventArgs>? DiagnosticEvent;
 
     public bool IsInitialized
     {
@@ -39,6 +43,17 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
             lock (_lockObject)
             {
                 return _handlers.Count;
+            }
+        }
+    }
+
+    public bool IsCapturing
+    {
+        get
+        {
+            lock (_lockObject)
+            {
+                return !_isDisposed && _activeSuspensions.Count == 0;
             }
         }
     }
@@ -74,6 +89,8 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _handlers = new List<HandlerRegistration>(INITIAL_HANDLERS_CAPACITY);
         _platformHandler.ConfigureHandler(HandleKeyPress);
+        if (_options.EnableDiagnostics)
+            _platformHandler.ConfigureDiagnostics(ReportDiagnostic);
     }
 
     public void Initialize(object platformView)
@@ -103,21 +120,40 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
     {
         ArgumentNullException.ThrowIfNull(key);
 
-        IKeyHandler[] currentHandlers;
+        HandlerRegistration[] currentHandlers;
+        var isSuspended = false;
         lock (_lockObject)
         {
             // Silent early-return: this runs on the platform input thread and may be
             // invoked for events already in flight after Dispose. Throwing here would
             // crash the platform input pipeline.
             if (_isDisposed) return;
-            currentHandlers = new IKeyHandler[_handlers.Count];
-            for (var index = 0; index < currentHandlers.Length; index++)
-                currentHandlers[index] = _handlers[index].Handler;
+            isSuspended = _activeSuspensions.Count > 0;
+            currentHandlers = isSuspended ? [] : _handlers.ToArray();
         }
 
-        var stopOnHandled = _options.StopOnHandled;
-        foreach (var handler in currentHandlers)
+        if (isSuspended)
         {
+            if (_options.EnableDiagnostics)
+            {
+                ReportDiagnostic(KeyboardDiagnosticEventArgs.FromKeyEvent(
+                    key,
+                    KeyboardDiagnosticStage.Ignored,
+                    "Capture is suspended."));
+            }
+            return;
+        }
+
+        if (_options.EnableDiagnostics)
+            ReportDiagnostic(KeyboardDiagnosticEventArgs.FromKeyEvent(key));
+
+        var stopOnHandled = _options.StopOnHandled;
+        foreach (var registration in currentHandlers)
+        {
+            if (registration.Scope is { IsEnabled: false })
+                continue;
+
+            var handler = registration.Handler;
             try
             {
                 if (handler?.ShouldHandle(key) == true)
@@ -135,6 +171,9 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
     }
 
     public IDisposable RegisterHandler(IKeyHandler handler, int priority = 0)
+        => RegisterHandler(handler, priority, scope: null);
+
+    private IDisposable RegisterHandler(IKeyHandler handler, int priority, CaptureScope? scope)
     {
         ArgumentNullException.ThrowIfNull(handler);
 
@@ -142,11 +181,12 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         {
             ThrowIfDisposed();
 
-            var existing = _handlers.Find(registration => ReferenceEquals(registration.Handler, handler));
+            var existing = _handlers.Find(registration =>
+                ReferenceEquals(registration.Handler, handler) && ReferenceEquals(registration.Scope, scope));
             if (existing is not null)
                 return new HandlerRegistrationToken(this, existing.Id);
 
-            var registration = new HandlerRegistration(++_nextRegistrationId, handler, priority);
+            var registration = new HandlerRegistration(++_nextRegistrationId, handler, priority, scope);
             var insertionIndex = _handlers.FindIndex(item => item.Priority < priority);
             if (insertionIndex < 0)
                 _handlers.Add(registration);
@@ -164,11 +204,36 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         lock (_lockObject)
         {
             if (_isDisposed) return false;
-            var index = _handlers.FindIndex(registration => ReferenceEquals(registration.Handler, handler));
-            if (index < 0)
-                return false;
-            _handlers.RemoveAt(index);
-            return true;
+            return _handlers.RemoveAll(registration => ReferenceEquals(registration.Handler, handler)) > 0;
+        }
+    }
+
+    public IDisposable SuspendCapture()
+    {
+        lock (_lockObject)
+        {
+            ThrowIfDisposed();
+            var suspensionId = ++_nextSuspensionId;
+            _activeSuspensions.Add(suspensionId);
+            return new SuspensionToken(this, suspensionId);
+        }
+    }
+
+    public void ResumeCapture()
+    {
+        lock (_lockObject)
+        {
+            ThrowIfDisposed();
+            _activeSuspensions.Clear();
+        }
+    }
+
+    public IKeyboardCaptureScope CreateScope(string? name = null, bool isEnabled = true)
+    {
+        lock (_lockObject)
+        {
+            ThrowIfDisposed();
+            return new CaptureScope(this, name, isEnabled);
         }
     }
 
@@ -178,6 +243,43 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         {
             if (_isDisposed) return;
             _handlers.RemoveAll(registration => registration.Id == registrationId);
+        }
+    }
+
+    private void ResumeCapture(long suspensionId)
+    {
+        lock (_lockObject)
+        {
+            if (_isDisposed) return;
+            _activeSuspensions.Remove(suspensionId);
+        }
+    }
+
+    private void ReportDiagnostic(KeyboardDiagnosticEventArgs diagnostic)
+    {
+        if (!_options.EnableDiagnostics)
+            return;
+
+        _logger.LogInformation(
+            "Keyboard event {Stage}: Platform={Platform}, Key={NormalizedKey}, NativeKeyCode={NativeKeyCode}, ScanCode={ScanCode}, Action={Action}, Flags={Flags}, Repeat={RepeatCount}, DeviceId={DeviceId}, Reason={Reason}",
+            diagnostic.Stage,
+            diagnostic.Platform,
+            diagnostic.NormalizedKey,
+            diagnostic.NativeKeyCode,
+            diagnostic.NativeScanCode,
+            diagnostic.NativeAction,
+            diagnostic.NativeFlags,
+            diagnostic.RepeatCount,
+            diagnostic.Device?.Id,
+            diagnostic.Reason);
+
+        try
+        {
+            DiagnosticEvent?.Invoke(this, diagnostic);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "A keyboard diagnostic subscriber failed");
         }
     }
 
@@ -211,6 +313,7 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
                 {
                     _platformHandler?.Cleanup();
                     _handlers.Clear();
+                    _activeSuspensions.Clear();
                     _boundPlatformView = null;
                 }
                 catch (Exception ex)
@@ -225,7 +328,7 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
 
     #endregion
 
-    private sealed record HandlerRegistration(long Id, IKeyHandler Handler, int Priority);
+    private sealed record HandlerRegistration(long Id, IKeyHandler Handler, int Priority, CaptureScope? Scope);
 
     private sealed class HandlerRegistrationToken : IDisposable
     {
@@ -241,6 +344,87 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         public void Dispose()
         {
             Interlocked.Exchange(ref _owner, null)?.UnregisterHandler(_registrationId);
+        }
+    }
+
+    private sealed class SuspensionToken : IDisposable
+    {
+        private KeyHandlerService? _owner;
+        private readonly long _suspensionId;
+
+        public SuspensionToken(KeyHandlerService owner, long suspensionId)
+        {
+            _owner = owner;
+            _suspensionId = suspensionId;
+        }
+
+        public void Dispose()
+        {
+            Interlocked.Exchange(ref _owner, null)?.ResumeCapture(_suspensionId);
+        }
+    }
+
+    private sealed class CaptureScope : IKeyboardCaptureScope
+    {
+        private readonly object _scopeLock = new();
+        private readonly KeyHandlerService _owner;
+        private readonly List<IDisposable> _registrations = [];
+        private int _isEnabled;
+        private bool _isDisposed;
+
+        public CaptureScope(KeyHandlerService owner, string? name, bool isEnabled)
+        {
+            _owner = owner;
+            Name = name;
+            _isEnabled = isEnabled ? 1 : 0;
+        }
+
+        public string? Name { get; }
+
+        public bool IsEnabled
+        {
+            get => Volatile.Read(ref _isEnabled) != 0;
+            set
+            {
+                lock (_scopeLock)
+                {
+                    ThrowIfDisposed();
+                    Volatile.Write(ref _isEnabled, value ? 1 : 0);
+                }
+            }
+        }
+
+        public IDisposable RegisterHandler(IKeyHandler handler, int priority = 0)
+        {
+            lock (_scopeLock)
+            {
+                ThrowIfDisposed();
+                var registration = _owner.RegisterHandler(handler, priority, this);
+                _registrations.Add(registration);
+                return registration;
+            }
+        }
+
+        public void Dispose()
+        {
+            IDisposable[] registrations;
+            lock (_scopeLock)
+            {
+                if (_isDisposed) return;
+                _isDisposed = true;
+                Volatile.Write(ref _isEnabled, 0);
+                registrations = _registrations.ToArray();
+                _registrations.Clear();
+            }
+
+            foreach (var registration in registrations)
+                registration.Dispose();
+        }
+
+        private void ThrowIfDisposed()
+        {
+            if (_isDisposed)
+                throw new ObjectDisposedException(nameof(IKeyboardCaptureScope));
         }
     }
 }

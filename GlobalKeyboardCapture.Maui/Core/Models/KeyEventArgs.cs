@@ -13,6 +13,33 @@ public sealed class KeyEventArgs
     public object? PlatformEvent { get; set; }
     public bool Handled { get; set; }
 
+    /// <summary>Gets or sets the platform that produced this event.</summary>
+    public KeyboardPlatform Platform { get; set; }
+
+    /// <summary>Gets or sets whether this event represents a key press or release.</summary>
+    public KeyboardEventType EventType { get; set; } = KeyboardEventType.KeyDown;
+
+    /// <summary>Gets or sets the physical key location, when known.</summary>
+    public KeyLocation Location { get; set; }
+
+    /// <summary>Gets or sets the native platform key code.</summary>
+    public int NativeKeyCode { get; set; }
+
+    /// <summary>Gets or sets the native hardware scan code.</summary>
+    public int NativeScanCode { get; set; }
+
+    /// <summary>Gets or sets native platform flags used for diagnostics.</summary>
+    public string? NativeFlags { get; set; }
+
+    /// <summary>Gets or sets the native repeat count.</summary>
+    public int RepeatCount { get; set; }
+
+    /// <summary>Gets whether this is an auto-repeat event.</summary>
+    public bool IsRepeat => RepeatCount > 0;
+
+    /// <summary>Gets or sets metadata about the originating input device.</summary>
+    public KeyboardDeviceInfo? Device { get; set; }
+
     // Characters and Function
     public char? Character { get; set; }
     public string? FunctionKey { get; set; }
