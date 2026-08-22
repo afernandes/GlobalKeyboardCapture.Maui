@@ -18,8 +18,10 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
     private readonly ILogger<KeyHandlerService> _logger;
     private readonly KeyHandlerOptions _options;
     private readonly HashSet<long> _activeSuspensions = [];
-    private object? _boundPlatformView;
+    private readonly Dictionary<object, PlatformViewRegistration> _platformViews =
+        new(ReferenceEqualityComparer.Instance);
     private long _nextRegistrationId;
+    private long _nextPlatformViewRegistrationId;
     private long _nextSuspensionId;
     private bool _isDisposed;
 
@@ -31,7 +33,18 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         {
             lock (_lockObject)
             {
-                return !_isDisposed && _boundPlatformView is not null;
+                return !_isDisposed && _platformViews.Count > 0;
+            }
+        }
+    }
+
+    public int PlatformViewCount
+    {
+        get
+        {
+            lock (_lockObject)
+            {
+                return _platformViews.Count;
             }
         }
     }
@@ -100,12 +113,24 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
 
         lock (_lockObject)
         {
-            if (ReferenceEquals(_boundPlatformView, platformView)) return;
+            ThrowIfDisposed();
+            if (_platformViews.TryGetValue(platformView, out var existing))
+            {
+                existing.IsPermanent = true;
+                return;
+            }
 
             try
             {
-                _platformHandler.Initialize(platformView);
-                _boundPlatformView = platformView;
+                PrepareForPlatformViewAttachment();
+                _platformHandler.Attach(platformView);
+                _platformViews.Add(
+                    platformView,
+                    new PlatformViewRegistration(
+                        ++_nextPlatformViewRegistrationId,
+                        platformView,
+                        isPermanent: true,
+                        leaseCount: 0));
             }
             catch (Exception ex)
             {
@@ -194,6 +219,113 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
                 _handlers.Insert(insertionIndex, registration);
 
             return new HandlerRegistrationToken(this, registration.Id);
+        }
+    }
+
+    public IDisposable AttachPlatformView(object platformView)
+    {
+        ArgumentNullException.ThrowIfNull(platformView);
+
+        lock (_lockObject)
+        {
+            ThrowIfDisposed();
+
+            if (_platformViews.TryGetValue(platformView, out var existing))
+            {
+                existing.LeaseCount++;
+                return new PlatformViewLease(this, platformView, existing.Id);
+            }
+
+            try
+            {
+                PrepareForPlatformViewAttachment();
+                _platformHandler.Attach(platformView);
+                var registration = new PlatformViewRegistration(
+                    ++_nextPlatformViewRegistrationId,
+                    platformView,
+                    isPermanent: false,
+                    leaseCount: 1);
+                _platformViews.Add(platformView, registration);
+                return new PlatformViewLease(this, platformView, registration.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to attach platform handler");
+                throw;
+            }
+        }
+    }
+
+    public bool DetachPlatformView(object platformView)
+    {
+        if (platformView is null)
+            return false;
+
+        lock (_lockObject)
+        {
+            if (_isDisposed || !_platformViews.Remove(platformView))
+                return false;
+
+            try
+            {
+                _platformHandler.Detach(platformView);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to detach platform handler");
+                throw;
+            }
+
+            return true;
+        }
+    }
+
+    private void PrepareForPlatformViewAttachment()
+    {
+        if (_platformHandler.SupportsMultiplePlatformViews || _platformViews.Count == 0)
+            return;
+
+        foreach (var registration in _platformViews.Values)
+        {
+            try
+            {
+                _platformHandler.Detach(registration.PlatformView);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogWarning(exception, "Failed to detach a previous platform view during rebind");
+            }
+        }
+
+        _platformViews.Clear();
+    }
+
+    private void ReleasePlatformView(object platformView, long registrationId)
+    {
+        lock (_lockObject)
+        {
+            if (_isDisposed
+                || !_platformViews.TryGetValue(platformView, out var registration)
+                || registration.Id != registrationId)
+            {
+                return;
+            }
+
+            if (registration.LeaseCount > 0)
+                registration.LeaseCount--;
+
+            if (registration.IsPermanent || registration.LeaseCount > 0)
+                return;
+
+            _platformViews.Remove(platformView);
+            try
+            {
+                _platformHandler.Detach(platformView);
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(exception, "Failed to release platform-view attachment");
+            }
         }
     }
 
@@ -314,7 +446,7 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
                     _platformHandler?.Cleanup();
                     _handlers.Clear();
                     _activeSuspensions.Clear();
-                    _boundPlatformView = null;
+                    _platformViews.Clear();
                 }
                 catch (Exception ex)
                 {
@@ -329,6 +461,37 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
     #endregion
 
     private sealed record HandlerRegistration(long Id, IKeyHandler Handler, int Priority, CaptureScope? Scope);
+
+    private sealed class PlatformViewRegistration(
+        long id,
+        object platformView,
+        bool isPermanent,
+        int leaseCount)
+    {
+        public long Id { get; } = id;
+        public object PlatformView { get; } = platformView;
+        public bool IsPermanent { get; set; } = isPermanent;
+        public int LeaseCount { get; set; } = leaseCount;
+    }
+
+    private sealed class PlatformViewLease : IDisposable
+    {
+        private KeyHandlerService? _owner;
+        private readonly object _platformView;
+        private readonly long _registrationId;
+
+        public PlatformViewLease(KeyHandlerService owner, object platformView, long registrationId)
+        {
+            _owner = owner;
+            _platformView = platformView;
+            _registrationId = registrationId;
+        }
+
+        public void Dispose()
+        {
+            Interlocked.Exchange(ref _owner, null)?.ReleasePlatformView(_platformView, _registrationId);
+        }
+    }
 
     private sealed class HandlerRegistrationToken : IDisposable
     {

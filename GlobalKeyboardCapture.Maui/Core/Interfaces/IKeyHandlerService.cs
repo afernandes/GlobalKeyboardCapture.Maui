@@ -6,10 +6,13 @@ public interface IKeyHandlerService
 
     bool IsInitialized { get; }
     bool IsCapturing { get; }
+    int PlatformViewCount { get; }
     int HandlerCount { get; }
     IReadOnlyList<IKeyHandler> Handlers { get; }
 
     void Initialize(object platformView);
+    IDisposable AttachPlatformView(object platformView);
+    bool DetachPlatformView(object platformView);
     IDisposable RegisterHandler(IKeyHandler handler, int priority = 0);
     bool UnregisterHandler(IKeyHandler handler);
     IDisposable SuspendCapture();

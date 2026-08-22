@@ -121,6 +121,57 @@ public class KeyHandlerServiceTests
     }
 
     [Fact]
+    public void PlatformViewLeasesAttachOnceAndDetachAfterLastLease()
+    {
+        var (svc, platform) = Build();
+        var view = new object();
+
+        var first = svc.AttachPlatformView(view);
+        var second = svc.AttachPlatformView(view);
+
+        svc.PlatformViewCount.Should().Be(1);
+        platform.InitializeCallCount.Should().Be(1);
+
+        first.Dispose();
+        platform.DetachCallCount.Should().Be(0);
+        second.Dispose();
+
+        platform.DetachCallCount.Should().Be(1);
+        svc.PlatformViewCount.Should().Be(0);
+        svc.IsInitialized.Should().BeFalse();
+    }
+
+    [Fact]
+    public void PlatformHandlerThatSupportsMultipleViewsKeepsEveryAttachment()
+    {
+        var (svc, platform) = Build();
+        var firstView = new object();
+        var secondView = new object();
+
+        using var first = svc.AttachPlatformView(firstView);
+        using var second = svc.AttachPlatformView(secondView);
+
+        svc.PlatformViewCount.Should().Be(2);
+        platform.AttachedViews.Should().BeEquivalentTo([firstView, secondView]);
+    }
+
+    [Fact]
+    public void SingleViewPlatformDetachesOldViewDuringRebind()
+    {
+        var platform = new FakePlatformKeyHandler(supportsMultiplePlatformViews: false);
+        using var svc = new KeyHandlerService(platform, NullLogger<KeyHandlerService>.Instance);
+        var firstView = new object();
+        var secondView = new object();
+
+        using var first = svc.AttachPlatformView(firstView);
+        using var second = svc.AttachPlatformView(secondView);
+
+        svc.PlatformViewCount.Should().Be(1);
+        platform.AttachedViews.Should().ContainSingle().Which.Should().BeSameAs(secondView);
+        platform.DetachedViews.Should().ContainSingle().Which.Should().BeSameAs(firstView);
+    }
+
+    [Fact]
     public void DisposeCleansUpPlatform()
     {
         var (svc, platform) = Build();

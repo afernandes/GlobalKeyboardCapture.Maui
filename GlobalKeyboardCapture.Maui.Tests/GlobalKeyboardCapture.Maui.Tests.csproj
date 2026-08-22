@@ -33,13 +33,19 @@
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyModifiers.cs" Link="Linked\KeyModifiers.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IKeyHandler.cs" Link="Linked\IKeyHandler.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IKeyHandlerService.cs" Link="Linked\IKeyHandlerService.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\ILifecycleHandler.cs" Link="Linked\ILifecycleHandler.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IKeyboardCaptureScope.cs" Link="Linked\IKeyboardCaptureScope.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IGlobalHotkeyService.cs" Link="Linked\IGlobalHotkeyService.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IPlatformKeyHandler.cs" Link="Linked\IPlatformKeyHandler.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IPlatformViewLifecycleSink.cs" Link="Linked\IPlatformViewLifecycleSink.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Services\KeyHandlerService.cs" Link="Linked\KeyHandlerService.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Services\UnsupportedGlobalHotkeyService.cs" Link="Linked\UnsupportedGlobalHotkeyService.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Services\NoOpPlatformKeyHandler.cs" Link="Linked\NoOpPlatformKeyHandler.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Configuration\KeyHandlerOptions.cs" Link="Linked\KeyHandlerOptions.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Configuration\BarcodeScannerProfile.cs" Link="Linked\BarcodeScannerProfile.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Handlers\HotkeyHandler.cs" Link="Linked\HotkeyHandler.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Handlers\BarcodeHandler.cs" Link="Linked\BarcodeHandler.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Handlers\KeyHandlerLifecycleHandler.cs" Link="Linked\KeyHandlerLifecycleHandler.cs" />
   </ItemGroup>
 
   <ItemGroup>

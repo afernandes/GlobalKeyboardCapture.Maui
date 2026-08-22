@@ -8,18 +8,22 @@ using KeyEventArgs = GlobalKeyboardCapture.Maui.Core.Models.KeyEventArgs;
 
 namespace GlobalKeyboardCapture.Maui;
 
-public class WindowsKeyHandler : IPlatformKeyHandler
+public sealed class WindowsKeyHandler : IPlatformKeyHandler, IDisposable
 {
-    private Microsoft.UI.Xaml.Window? _window;
-    private Microsoft.UI.Xaml.UIElement? _subscribedContent;
+    private readonly object _lockObject = new();
+    private readonly Dictionary<Microsoft.UI.Xaml.Window, WindowSubscription> _subscriptions =
+        new(ReferenceEqualityComparer.Instance);
     private Action<KeyEventArgs>? _onKeyPressed;
     private Action<Core.Models.KeyboardDiagnosticEventArgs>? _onDiagnostic;
+    private bool _isDisposed;
 
-    readonly Func<VirtualKey, CoreVirtualKeyStates> GetKeyState;
+    private readonly Func<VirtualKey, CoreVirtualKeyStates> _getKeyState;
+
+    public bool SupportsMultiplePlatformViews => true;
     
     public WindowsKeyHandler()
     {
-        GetKeyState = InputKeyboardSource.GetKeyStateForCurrentThread;
+        _getKeyState = InputKeyboardSource.GetKeyStateForCurrentThread;
     }
 
     public void ConfigureHandler(Action<KeyEventArgs> onKeyPressed)
@@ -33,52 +37,75 @@ public class WindowsKeyHandler : IPlatformKeyHandler
         _onDiagnostic = onDiagnostic;
     }
 
-    public void Initialize(object platformView)
+    public void Attach(object platformView)
     {
-        // Detach from any previously bound window/content first.
-        Unsubscribe();
+        ArgumentNullException.ThrowIfNull(platformView);
+        ThrowIfDisposed();
+        if (platformView is not Microsoft.UI.Xaml.Window window)
+            throw new ArgumentException("The Windows platform view must be a WinUI Window.", nameof(platformView));
 
-        _window = platformView as Microsoft.UI.Xaml.Window;
-        if (_window == null)
-            return;
+        lock (_lockObject)
+        {
+            if (_subscriptions.ContainsKey(window))
+                return;
 
-        // During OnLaunched the MAUI root content is frequently not attached yet, so a
-        // one-shot "subscribe if Content != null" silently captures nothing. Try now and,
-        // if Content isn't ready, retry on each activation until it is.
-        if (!TrySubscribe())
-            _window.Activated += OnWindowActivated;
+            var subscription = new WindowSubscription(window);
+            _subscriptions.Add(window, subscription);
+            window.Activated += OnWindowActivated;
+            TrySubscribe(subscription);
+        }
     }
 
     private void OnWindowActivated(object sender, Microsoft.UI.Xaml.WindowActivatedEventArgs args)
     {
-        if (TrySubscribe() && _window != null)
-            _window.Activated -= OnWindowActivated;
+        if (sender is not Microsoft.UI.Xaml.Window window)
+            return;
+
+        lock (_lockObject)
+        {
+            if (_subscriptions.TryGetValue(window, out var subscription))
+                TrySubscribe(subscription);
+        }
     }
 
-    private bool TrySubscribe()
+    private bool TrySubscribe(WindowSubscription subscription)
     {
-        var content = _window?.Content;
+        var content = subscription.Window.Content;
         if (content == null)
             return false;
-        if (ReferenceEquals(content, _subscribedContent))
+        if (ReferenceEquals(content, subscription.SubscribedContent))
             return true;
 
         // Move the subscription to the exact current content element.
-        if (_subscribedContent != null)
-            _subscribedContent.PreviewKeyDown -= OnKeyDown;
+        if (subscription.SubscribedContent != null)
+            subscription.SubscribedContent.PreviewKeyDown -= OnKeyDown;
         content.PreviewKeyDown += OnKeyDown;
-        _subscribedContent = content;
+        subscription.SubscribedContent = content;
         return true;
     }
 
-    private void Unsubscribe()
+    public bool Detach(object platformView)
     {
-        if (_window != null)
-            _window.Activated -= OnWindowActivated;
-        if (_subscribedContent != null)
+        if (platformView is not Microsoft.UI.Xaml.Window window)
+            return false;
+
+        lock (_lockObject)
         {
-            _subscribedContent.PreviewKeyDown -= OnKeyDown;
-            _subscribedContent = null;
+            if (!_subscriptions.Remove(window, out var subscription))
+                return false;
+
+            Unsubscribe(subscription);
+            return true;
+        }
+    }
+
+    private void Unsubscribe(WindowSubscription subscription)
+    {
+        subscription.Window.Activated -= OnWindowActivated;
+        if (subscription.SubscribedContent != null)
+        {
+            subscription.SubscribedContent.PreviewKeyDown -= OnKeyDown;
+            subscription.SubscribedContent = null;
         }
     }
 
@@ -100,11 +127,11 @@ public class WindowsKeyHandler : IPlatformKeyHandler
             RepeatCount = (int)args.KeyStatus.RepeatCount,
 
             // Modifiers
-            ControlKey = (GetKeyState(VirtualKey.Control) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down,
-            AltKey = (GetKeyState(VirtualKey.Menu) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down,
-            ShiftKey = (GetKeyState(VirtualKey.Shift) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down,
-            WindowsKey = ((GetKeyState(VirtualKey.LeftWindows) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down) ||
-                         ((GetKeyState(VirtualKey.RightWindows) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down),
+            ControlKey = (_getKeyState(VirtualKey.Control) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down,
+            AltKey = (_getKeyState(VirtualKey.Menu) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down,
+            ShiftKey = (_getKeyState(VirtualKey.Shift) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down,
+            WindowsKey = ((_getKeyState(VirtualKey.LeftWindows) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down) ||
+                         ((_getKeyState(VirtualKey.RightWindows) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down),
 
             // Navigation
             UpKey = args.Key == VirtualKey.Up,
@@ -151,8 +178,27 @@ public class WindowsKeyHandler : IPlatformKeyHandler
 
     public void Cleanup()
     {
-        Unsubscribe();
-        _window = null;
+        lock (_lockObject)
+        {
+            foreach (var subscription in _subscriptions.Values)
+                Unsubscribe(subscription);
+            _subscriptions.Clear();
+        }
+    }
+
+    private void ThrowIfDisposed()
+    {
+        ObjectDisposedException.ThrowIf(_isDisposed, this);
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed)
+            return;
+
+        Cleanup();
+        _isDisposed = true;
+        GC.SuppressFinalize(this);
     }
 
     private static Core.Models.KeyLocation GetKeyLocation(VirtualKey key)
@@ -164,5 +210,11 @@ public class WindowsKeyHandler : IPlatformKeyHandler
         if (key is VirtualKey.RightControl or VirtualKey.RightMenu or VirtualKey.RightShift or VirtualKey.RightWindows)
             return Core.Models.KeyLocation.Right;
         return Core.Models.KeyLocation.Standard;
+    }
+
+    private sealed class WindowSubscription(Microsoft.UI.Xaml.Window window)
+    {
+        public Microsoft.UI.Xaml.Window Window { get; } = window;
+        public Microsoft.UI.Xaml.UIElement? SubscribedContent { get; set; }
     }
 }

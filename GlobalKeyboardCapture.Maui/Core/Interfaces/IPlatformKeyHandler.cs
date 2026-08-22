@@ -1,7 +1,9 @@
 ﻿namespace GlobalKeyboardCapture.Maui.Core.Interfaces;
 public interface IPlatformKeyHandler
 {
-    void Initialize(object platformView);
+    bool SupportsMultiplePlatformViews { get; }
+    void Attach(object platformView);
+    bool Detach(object platformView);
     void ConfigureHandler(Action<Models.KeyEventArgs> onKeyPressed);
     void ConfigureDiagnostics(Action<Models.KeyboardDiagnosticEventArgs> onDiagnostic)
     {

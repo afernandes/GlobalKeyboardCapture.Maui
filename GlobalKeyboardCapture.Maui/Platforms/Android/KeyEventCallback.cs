@@ -7,7 +7,7 @@ namespace GlobalKeyboardCapture.Maui.Platforms.Android;
 
 public class KeyEventCallback : Java.Lang.Object, IWindowCallback
 {
-    private readonly AndroidKeyHandler _handler;
+    private AndroidKeyHandler? _handler;
     private readonly IWindowCallback _original;
 
     public KeyEventCallback(AndroidKeyHandler handler, IWindowCallback original)
@@ -23,9 +23,10 @@ public class KeyEventCallback : Java.Lang.Object, IWindowCallback
         if (e is null)
             return false;
 
+        var handler = Volatile.Read(ref _handler);
         try
         {
-            if (_handler.DispatchKeyEvent(e))
+            if (handler?.DispatchKeyEvent(e) == true)
                 return true;
         }
         catch (ObjectDisposedException)
@@ -35,6 +36,11 @@ public class KeyEventCallback : Java.Lang.Object, IWindowCallback
             // instead of crashing the input thread.
         }
         return _original.DispatchKeyEvent(e);
+    }
+
+    internal void DisableCapture()
+    {
+        Interlocked.Exchange(ref _handler, null);
     }
 
     #region Implement other IWindowCallback methods

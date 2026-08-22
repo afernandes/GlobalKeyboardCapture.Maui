@@ -1,11 +1,13 @@
 ﻿using System.Runtime.CompilerServices;
 using System.Collections.Concurrent;
+using Android.Content;
 using Android.Views;
 using GlobalKeyboardCapture.Maui.Core.Interfaces;
 using GlobalKeyboardCapture.Maui.Core.Models;
 using GlobalKeyboardCapture.Maui.Platforms.Android;
 using Activity = Android.App.Activity;
 using IWindowCallback = Android.Views.Window.ICallback;
+using NativeView = Android.Views.View;
 
 namespace GlobalKeyboardCapture.Maui;
 
@@ -21,7 +23,10 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
     private Activity? _activity;
     private IWindowCallback? _originalDispatcher;
     private KeyEventCallback? _installedCallback;
+    private object? _boundPlatformView;
     private bool _isDisposed;
+
+    public bool SupportsMultiplePlatformViews => false;
 
     public void ConfigureHandler(Action<Core.Models.KeyEventArgs> onKeyPressed)
     {
@@ -78,21 +83,21 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
         return keyEvent.Handled;
     }
 
-    public void Initialize(object platformView)
+    public void Attach(object platformView)
     {
         ArgumentNullException.ThrowIfNull(platformView);
         ThrowIfDisposed();
 
         lock (_lockObject)
         {
-            var currentActivity = Platform.CurrentActivity
-                ?? throw new InvalidOperationException("Current activity is null");
+            var currentActivity = ResolveActivity(platformView)
+                ?? throw new ArgumentException("The Android platform view must resolve to an Activity.", nameof(platformView));
 
             if (currentActivity.Window == null)
                 throw new InvalidOperationException("Activity window is null");
 
             // No-op if we're already bound to this same activity.
-            if (ReferenceEquals(_activity, currentActivity))
+            if (ReferenceEquals(_activity, currentActivity) && ReferenceEquals(_boundPlatformView, platformView))
                 return;
 
             // Restore the previous dispatcher before binding to the new activity.
@@ -103,23 +108,64 @@ public sealed class AndroidKeyHandler : IPlatformKeyHandler, IDisposable
             _originalDispatcher = _activity.Window.Callback;
             _installedCallback = new KeyEventCallback(this, _activity.Window.Callback!);
             _activity.Window.Callback = _installedCallback;
+            _boundPlatformView = platformView;
+        }
+    }
+
+    public bool Detach(object platformView)
+    {
+        if (platformView is null)
+            return false;
+
+        lock (_lockObject)
+        {
+            if (_isDisposed || !ReferenceEquals(_boundPlatformView, platformView))
+                return false;
+
+            RestoreOriginalDispatcher();
+            return true;
         }
     }
 
     private void RestoreOriginalDispatcher()
     {
-        if (_activity?.Window != null && _originalDispatcher != null)
+        var installedCallback = _installedCallback;
+        installedCallback?.DisableCapture();
+
+        if (_activity?.Window != null
+            && _originalDispatcher != null
+            && ReferenceEquals(_activity.Window.Callback, installedCallback))
         {
             _activity.Window.Callback = _originalDispatcher;
+            installedCallback?.Dispose();
         }
         _originalDispatcher = null;
         _activity = null;
+        _boundPlatformView = null;
 
-        // Dispose the Java proxy we installed so it doesn't pin the previous activity
-        // (with its handler/original-callback references) across recreation. The original
-        // dispatcher is restored above first, so the window no longer points at the proxy.
-        _installedCallback?.Dispose();
+        // If another library wrapped our callback after installation, do not overwrite
+        // its callback chain or dispose an object it still references. Disable capture
+        // instead; that proxy now only forwards to the original callback.
         _installedCallback = null;
+    }
+
+    private static Activity? ResolveActivity(object platformView)
+    {
+        if (platformView is Activity activity)
+            return activity;
+
+        if (platformView is not NativeView view)
+            return null;
+
+        Context? context = view.Context;
+        while (context is ContextWrapper wrapper)
+        {
+            if (wrapper is Activity wrappedActivity)
+                return wrappedActivity;
+            context = wrapper.BaseContext;
+        }
+
+        return context as Activity;
     }
 
     public void Cleanup()

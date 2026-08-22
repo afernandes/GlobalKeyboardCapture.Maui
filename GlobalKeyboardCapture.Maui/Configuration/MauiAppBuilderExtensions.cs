@@ -1,4 +1,4 @@
-﻿using GlobalKeyboardCapture.Maui.Core.Interfaces;
+using GlobalKeyboardCapture.Maui.Core.Interfaces;
 using Microsoft.Maui.LifecycleEvents;
 
 namespace GlobalKeyboardCapture.Maui.Configuration;
@@ -7,39 +7,25 @@ public static class MauiAppBuilderExtensions
 {
     public static MauiAppBuilder UseKeyboardHandling(this MauiAppBuilder builder)
     {
+        ArgumentNullException.ThrowIfNull(builder);
+
         builder.ConfigureLifecycleEvents(events =>
         {
 #if WINDOWS
             events.AddWindows(windows => windows
-                .OnLaunched((application, args) =>
-                {
-                    if (Application.Current is null)
-                        return;
-
-                    var handler = Application.Current.Handler?.MauiContext?.Services.GetService<ILifecycleHandler>();
-                    handler?.OnStart();
-                }));
+                .OnWindowCreated(window => ResolveLifecycleHandler()?.OnPlatformViewCreated(window))
+                .OnClosed((window, args) => ResolveLifecycleHandler()?.OnPlatformViewDestroyed(window)));
 #elif ANDROID
             events.AddAndroid(android => android
-                .OnResume(activity =>
-                {
-                    if (Application.Current is null)
-                        return;
-                    
-                    var handler = Application.Current.Handler?.MauiContext?.Services.GetService<ILifecycleHandler>();
-                    handler?.OnResume();
-                })
-                .OnCreate((activity, bundle) =>
-                {
-                    if (Application.Current is null)
-                        return;
-                    
-                    var handler = Application.Current.Handler?.MauiContext?.Services.GetService<ILifecycleHandler>();
-                    handler?.OnStart();
-                }));
+                .OnCreate((activity, bundle) => ResolveLifecycleHandler()?.OnPlatformViewCreated(activity))
+                .OnDestroy(activity => ResolveLifecycleHandler()?.OnPlatformViewDestroyed(activity)));
 #endif
         });
 
         return builder;
     }
+
+    private static ILifecycleHandler? ResolveLifecycleHandler() =>
+        IPlatformApplication.Current?.Services.GetService<ILifecycleHandler>()
+        ?? Application.Current?.Handler?.MauiContext?.Services.GetService<ILifecycleHandler>();
 }

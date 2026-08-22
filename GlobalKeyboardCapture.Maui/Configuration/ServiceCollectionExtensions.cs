@@ -17,13 +17,23 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IKeyHandlerService, KeyHandlerService>();
         services.AddTransient<BarcodeHandler>();
         services.AddTransient<HotkeyHandler>();
-        services.AddSingleton<ILifecycleHandler, KeyHandlerLifecycleHandler>();
 
 #if WINDOWS
         services.AddSingleton<IPlatformKeyHandler, WindowsKeyHandler>();
+        services.AddSingleton<WindowsGlobalHotkeyService>();
+        services.AddSingleton<IGlobalHotkeyService>(provider => provider.GetRequiredService<WindowsGlobalHotkeyService>());
+        services.AddSingleton<IPlatformViewLifecycleSink>(provider => provider.GetRequiredService<WindowsGlobalHotkeyService>());
 #elif ANDROID
         services.AddSingleton<IPlatformKeyHandler, AndroidKeyHandler>();
+        services.AddSingleton<IGlobalHotkeyService, UnsupportedGlobalHotkeyService>();
+#else
+        services.AddSingleton<IPlatformKeyHandler, NoOpPlatformKeyHandler>();
+        services.AddSingleton<IGlobalHotkeyService, UnsupportedGlobalHotkeyService>();
 #endif
+
+        services.AddSingleton<ILifecycleHandler>(provider => new KeyHandlerLifecycleHandler(
+            provider.GetRequiredService<IKeyHandlerService>(),
+            provider.GetServices<IPlatformViewLifecycleSink>()));
 
         return services;
     }
