@@ -20,8 +20,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            10.0.x
+          dotnet-version: 10.0.x
 
       - name: Restore tests
         run: dotnet restore GlobalKeyboardCapture.Maui.Tests/GlobalKeyboardCapture.Maui.Tests.csproj
@@ -39,39 +38,119 @@ jobs:
           name: test-results-${{ matrix.os }}
           path: '**/TestResults/*.trx'
 
-  build-library:
-    name: Build library (${{ matrix.os }})
+  build-platform:
+    name: Build ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        include:
+          - name: Android
+            os: ubuntu-latest
+            workload: android
+            tfm: net10.0-android
+          - name: Windows
+            os: windows-latest
+            workload: maui-windows
+            tfm: net10.0-windows10.0.19041.0
+          - name: iOS
+            os: macos-15
+            workload: ios
+            tfm: net10.0-ios
+          - name: Mac Catalyst
+            os: macos-15
+            workload: maccatalyst
+            tfm: net10.0-maccatalyst
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: |
-            10.0.x
+          dotnet-version: 10.0.x
 
-      - name: Install MAUI workload
+      - name: Install platform workload
+        run: dotnet workload install ${{ matrix.workload }} --ignore-failed-sources
+
+      - name: Build library
+        run: dotnet build GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -c Release -f ${{ matrix.tfm }}
+
+      - name: Build sample
+        run: dotnet build GlobalKeyboardCapture.Maui.Sample/GlobalKeyboardCapture.Maui.Sample.csproj -c Release -f ${{ matrix.tfm }}
+
+  android-integration:
+    name: Android key integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install Android workload
+        run: dotnet workload install android --ignore-failed-sources
+
+      - name: Build Android sample APK
+        run: dotnet build GlobalKeyboardCapture.Maui.Sample/GlobalKeyboardCapture.Maui.Sample.csproj -c Release -f net10.0-android -p:AndroidPackageFormat=apk
+
+      - name: Inject hardware-key events
+        uses: reactivecircus/android-emulator-runner@c9c93e6ba9c4194322e114c40970d5983d9a07cc # v2.38.0
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          script: |
+            set -euo pipefail
+            apk_path="$(find GlobalKeyboardCapture.Maui.Sample/bin/Release/net10.0-android -name '*-Signed.apk' -print -quit)"
+            test -n "$apk_path"
+            adb install -r "$apk_path"
+            adb logcat -c
+            adb shell monkey -p com.companyname.globalkeyboardcapturemauisample 1
+            sleep 8
+            adb shell input keyevent KEYCODE_F1
+            adb shell input keyevent KEYCODE_F12
+            adb shell input keyevent KEYCODE_NUMPAD_ENTER
+            sleep 2
+            adb logcat -d -v brief > android-keyboard.log
+            grep -F 'Key=F1;NativeKeyCode=131' android-keyboard.log
+            grep -F 'Key=F12;NativeKeyCode=142' android-keyboard.log
+            grep -F 'Key=Enter;NativeKeyCode=160;Location=Numpad' android-keyboard.log
+
+      - name: Upload Android integration log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-keyboard-log
+          path: android-keyboard.log
+
+  pack:
+    name: Pack NuGet
+    runs-on: windows-latest
+    needs: [test, build-platform]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install MAUI workloads
         run: dotnet workload install maui --ignore-failed-sources
 
-      - name: Restore library
-        run: dotnet restore GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj
-
-      - name: Build library (Release)
-        run: dotnet build GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -c Release --no-restore
-
-      # Builds the platform handlers (#if WINDOWS/#elif ANDROID) and the
-      # UseKeyboardHandling()/AddKeyboardHandling() wiring, which the library and
-      # test builds never compile — without this, platform/DI regressions pass green.
-      - name: Build sample
-        run: dotnet build GlobalKeyboardCapture.Maui.Sample/GlobalKeyboardCapture.Maui.Sample.csproj -c Release
+      - name: Pack library
+        run: dotnet pack GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -c Release
 
       - name: Upload NuGet package
-        if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v4
         with:
           name: nupkg

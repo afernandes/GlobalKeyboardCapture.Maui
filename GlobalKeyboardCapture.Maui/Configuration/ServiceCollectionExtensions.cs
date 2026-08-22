@@ -27,6 +27,9 @@ public static class ServiceCollectionExtensions
 #elif ANDROID
         services.AddSingleton<IPlatformKeyHandler, AndroidKeyHandler>();
         services.AddSingleton<IGlobalHotkeyService, UnsupportedGlobalHotkeyService>();
+#elif IOS || MACCATALYST
+        services.AddSingleton<IPlatformKeyHandler, AppleKeyHandler>();
+        services.AddSingleton<IGlobalHotkeyService, UnsupportedGlobalHotkeyService>();
 #else
         services.AddSingleton<IPlatformKeyHandler, NoOpPlatformKeyHandler>();
         services.AddSingleton<IGlobalHotkeyService, UnsupportedGlobalHotkeyService>();

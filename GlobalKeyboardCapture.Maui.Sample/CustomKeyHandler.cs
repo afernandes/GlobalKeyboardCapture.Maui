@@ -17,6 +17,11 @@ public sealed class KeyDisplayHandler : IKeyHandler
 
     public void HandleKey(KeyEventArgs key)
     {
+#if ANDROID
+        Android.Util.Log.Info(
+            "GKC.Integration",
+            $"Key={key};NativeKeyCode={key.NativeKeyCode};Location={key.Location};EventType={key.EventType}");
+#endif
         KeyPressed?.Invoke(this, key.ToString());
     }
 }

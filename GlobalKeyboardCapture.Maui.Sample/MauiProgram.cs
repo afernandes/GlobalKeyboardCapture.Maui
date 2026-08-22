@@ -1,5 +1,4 @@
 ﻿using GlobalKeyboardCapture.Maui.Configuration;
-using GlobalKeyboardCapture.MauiSample;
 using Microsoft.Extensions.Logging;
 
 namespace GlobalKeyboardCapture.Maui.Sample

@@ -21,6 +21,8 @@
     code path for the logic under test.
   -->
   <ItemGroup>
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Mapping\AppleKeyMapper.cs" Link="Linked\AppleKeyMapper.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Mapping\PlatformKeyMapper.cs" Link="Linked\PlatformKeyMapper.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyEventArgs.cs" Link="Linked\KeyEventArgs.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\BarcodeScanResult.cs" Link="Linked\BarcodeScanResult.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyboardDeviceInfo.cs" Link="Linked\KeyboardDeviceInfo.cs" />
