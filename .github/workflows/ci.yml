@@ -56,18 +56,22 @@ jobs:
             os: ubuntu-latest
             workload: maui-android
             tfm: net10.0-android
+            rid: android-x64
           - name: Windows
             os: windows-latest
             workload: maui-windows
             tfm: net10.0-windows10.0.19041.0
+            rid: win-x64
           - name: iOS
-            os: macos-15
+            os: macos-26
             workload: maui-ios
             tfm: net10.0-ios
+            rid: iossimulator-arm64
           - name: Mac Catalyst
-            os: macos-15
+            os: macos-26
             workload: maui-maccatalyst
             tfm: net10.0-maccatalyst
+            rid: maccatalyst-arm64
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -83,7 +87,7 @@ jobs:
         run: dotnet build GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -c Release -f ${{ matrix.tfm }} -p:TargetFrameworks=${{ matrix.tfm }}
 
       - name: Build sample
-        run: dotnet build GlobalKeyboardCapture.Maui.Sample/GlobalKeyboardCapture.Maui.Sample.csproj -c Release -f ${{ matrix.tfm }} -p:TargetFrameworks=${{ matrix.tfm }}
+        run: dotnet build GlobalKeyboardCapture.Maui.Sample/GlobalKeyboardCapture.Maui.Sample.csproj -c Release -f ${{ matrix.tfm }} -r ${{ matrix.rid }} -p:TargetFrameworks=${{ matrix.tfm }}
 
   android-integration:
     name: Android key integration
@@ -116,7 +120,7 @@ jobs:
           profile: pixel_2
           disable-animations: true
           script: |
-            set -euo pipefail
+            set -eu
             apk_path="$(find GlobalKeyboardCapture.Maui.Sample/bin/Release/net10.0-android -name '*-Signed.apk' -print -quit)"
             test -n "$apk_path"
             adb install -r "$apk_path"
