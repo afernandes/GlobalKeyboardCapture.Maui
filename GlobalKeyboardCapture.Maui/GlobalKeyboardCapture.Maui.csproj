@@ -65,7 +65,6 @@
 		<PackageProjectUrl>https://github.com/afernandes/GlobalKeyboardCapture.Maui</PackageProjectUrl>
 
 		<!-- Configurações de Build -->
-		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
