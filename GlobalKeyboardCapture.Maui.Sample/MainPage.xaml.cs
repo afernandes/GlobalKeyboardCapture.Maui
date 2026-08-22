@@ -62,6 +62,9 @@ public partial class MainPage : ContentPage
         TryRegisterGlobalHotkey();
         CaptureScopeSwitch.IsToggled = true;
         UpdatePipelineStatus();
+#if ANDROID
+        Android.Util.Log.Info("GKC.Integration", "Ready");
+#endif
     }
 
     protected override void OnDisappearing()

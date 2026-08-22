@@ -110,7 +110,13 @@ jobs:
         run: dotnet workload install maui-android --ignore-failed-sources
 
       - name: Build Android sample APK
-        run: dotnet build GlobalKeyboardCapture.Maui.Sample/GlobalKeyboardCapture.Maui.Sample.csproj -c Release -f net10.0-android -p:TargetFrameworks=net10.0-android -p:AndroidPackageFormat=apk
+        run: dotnet build GlobalKeyboardCapture.Maui.Sample/GlobalKeyboardCapture.Maui.Sample.csproj -c Release -f net10.0-android -r android-x64 -p:TargetFrameworks=net10.0-android -p:AndroidPackageFormat=apk -p:RunAOTCompilation=false
+
+      - name: Enable KVM acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
 
       - name: Inject hardware-key events
         uses: reactivecircus/android-emulator-runner@c9c93e6ba9c4194322e114c40970d5983d9a07cc # v2.38.0
@@ -119,14 +125,15 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
+          enable-hw-keyboard: true
           script: |
             adb install -r "$(find GlobalKeyboardCapture.Maui.Sample/bin/Release/net10.0-android -name '*-Signed.apk' -print -quit)"
             adb logcat -c
             adb shell monkey -p com.companyname.globalkeyboardcapturemauisample 1
-            sleep 8
-            adb shell input keyevent KEYCODE_F1
-            adb shell input keyevent KEYCODE_F12
-            adb shell input keyevent KEYCODE_NUMPAD_ENTER
+            timeout 60 sh -c 'until adb logcat -d -s GKC.Integration:I "*:S" | grep -F "Ready"; do sleep 1; done'
+            adb emu event send EV_KEY:KEY_F1:1 EV_SYN:0:0 EV_KEY:KEY_F1:0 EV_SYN:0:0
+            adb emu event send EV_KEY:KEY_F12:1 EV_SYN:0:0 EV_KEY:KEY_F12:0 EV_SYN:0:0
+            adb emu event send EV_KEY:KEY_KPENTER:1 EV_SYN:0:0 EV_KEY:KEY_KPENTER:0 EV_SYN:0:0
             sleep 2
             adb logcat -d -v brief > android-keyboard.log
             grep -F 'Key=F1;NativeKeyCode=131' android-keyboard.log
