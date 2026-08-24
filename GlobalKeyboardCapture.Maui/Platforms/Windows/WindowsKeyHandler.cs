@@ -81,6 +81,9 @@ internal sealed class WindowsKeyHandler : IPlatformKeyHandler, IDisposable
 
     private void OnSubscribedContentUnloaded(object sender, RoutedEventArgs args)
     {
+        if (sender is not FrameworkElement unloadedContent)
+            return;
+
         lock (_lockObject)
         {
             foreach (var subscription in _subscriptions.Values)
@@ -89,7 +92,7 @@ internal sealed class WindowsKeyHandler : IPlatformKeyHandler, IDisposable
                     continue;
 
                 DetachSubscribedContent(subscription);
-                subscription.UnloadedContent = sender as Microsoft.UI.Xaml.UIElement;
+                SetUnloadedContent(subscription, unloadedContent);
                 StartContentRetry(subscription);
                 subscription.Window.DispatcherQueue.TryEnqueue(() =>
                 {
@@ -104,6 +107,22 @@ internal sealed class WindowsKeyHandler : IPlatformKeyHandler, IDisposable
                         RefreshContentSubscription(subscription);
                     }
                 });
+                return;
+            }
+        }
+    }
+
+    private void OnUnloadedContentLoaded(object sender, RoutedEventArgs args)
+    {
+        lock (_lockObject)
+        {
+            foreach (var subscription in _subscriptions.Values)
+            {
+                if (!ReferenceEquals(subscription.UnloadedContent, sender))
+                    continue;
+
+                ClearUnloadedContent(subscription);
+                RefreshContentSubscription(subscription);
                 return;
             }
         }
@@ -129,24 +148,20 @@ internal sealed class WindowsKeyHandler : IPlatformKeyHandler, IDisposable
         var content = subscription.Window.Content;
         if (content == null)
             return false;
-        if (ReferenceEquals(content, subscription.UnloadedContent)
-            && content is FrameworkElement unloadedContent
-            && !unloadedContent.IsLoaded)
-        {
+        if (ReferenceEquals(content, subscription.UnloadedContent))
             return false;
-        }
         if (ReferenceEquals(content, subscription.SubscribedContent))
             return true;
 
         // Move the subscription to the exact current content element.
         DetachSubscribedContent(subscription);
+        ClearUnloadedContent(subscription);
         content.PreviewKeyDown += OnKeyDown;
         if (_options.CaptureKeyUp)
             content.PreviewKeyUp += OnKeyUp;
         if (content is FrameworkElement frameworkElement)
             frameworkElement.Unloaded += OnSubscribedContentUnloaded;
         subscription.SubscribedContent = content;
-        subscription.UnloadedContent = null;
         return true;
     }
 
@@ -204,6 +219,24 @@ internal sealed class WindowsKeyHandler : IPlatformKeyHandler, IDisposable
             subscription.ContentRetryTimer = null;
         }
         DetachSubscribedContent(subscription);
+        ClearUnloadedContent(subscription);
+    }
+
+    private void SetUnloadedContent(
+        WindowSubscription subscription,
+        FrameworkElement unloadedContent)
+    {
+        ClearUnloadedContent(subscription);
+        subscription.UnloadedContent = unloadedContent;
+        unloadedContent.Loaded += OnUnloadedContentLoaded;
+    }
+
+    private void ClearUnloadedContent(WindowSubscription subscription)
+    {
+        if (subscription.UnloadedContent is null)
+            return;
+
+        subscription.UnloadedContent.Loaded -= OnUnloadedContentLoaded;
         subscription.UnloadedContent = null;
     }
 
@@ -353,7 +386,7 @@ internal sealed class WindowsKeyHandler : IPlatformKeyHandler, IDisposable
     {
         public Microsoft.UI.Xaml.Window Window { get; } = window;
         public Microsoft.UI.Xaml.UIElement? SubscribedContent { get; set; }
-        public Microsoft.UI.Xaml.UIElement? UnloadedContent { get; set; }
+        public FrameworkElement? UnloadedContent { get; set; }
         public DispatcherQueueTimer? ContentRetryTimer { get; set; }
     }
 }

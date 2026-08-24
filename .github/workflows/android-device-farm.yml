@@ -38,6 +38,9 @@ jobs:
         with:
           gradle-version: '8.13'
 
+      - name: Create ephemeral Android signing key
+        run: keytool -genkeypair -noprompt -keystore "$RUNNER_TEMP/gkc-integration.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=GlobalKeyboardCapture CI,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
+
       - name: Authenticate to Google Cloud with OIDC
         uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
         with:
@@ -61,10 +64,12 @@ jobs:
         run: dotnet workload install maui-android --ignore-failed-sources
 
       - name: Build debuggable MAUI sample APK
-        run: dotnet build GlobalKeyboardCapture.Maui.Sample/GlobalKeyboardCapture.Maui.Sample.csproj -c Debug -f net10.0-android -p:TargetFrameworks=net10.0-android -p:AndroidPackageFormat=apk -p:RunAOTCompilation=false
+        run: dotnet build GlobalKeyboardCapture.Maui.Sample/GlobalKeyboardCapture.Maui.Sample.csproj -c Debug -f net10.0-android -p:TargetFrameworks=net10.0-android -p:AndroidPackageFormat=apk -p:RunAOTCompilation=false -p:AndroidKeyStore=true -p:AndroidSigningKeyStore="$RUNNER_TEMP/gkc-integration.keystore" -p:AndroidSigningStorePass=android -p:AndroidSigningKeyAlias=androiddebugkey -p:AndroidSigningKeyPass=android
 
       - name: Build UI Automator test APK
         run: gradle -p eng/android-device-tests :app:assembleDebugAndroidTest --no-daemon
+        env:
+          GKC_ANDROID_KEYSTORE: ${{ runner.temp }}/gkc-integration.keystore
 
       - name: Run physical-device matrix
         shell: bash

@@ -2,6 +2,8 @@ plugins {
     id("com.android.application")
 }
 
+val integrationKeystorePath = System.getenv("GKC_ANDROID_KEYSTORE")
+
 android {
     namespace = "io.github.afernandes.globalkeyboardcapture.devicetests"
     compileSdk = 36
@@ -20,6 +22,16 @@ android {
         versionCode = 1
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    if (!integrationKeystorePath.isNullOrBlank()) {
+        val integrationSigning = signingConfigs.create("integration") {
+            storeFile = file(integrationKeystorePath)
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+        buildTypes.getByName("debug").signingConfig = integrationSigning
     }
 }
 

@@ -83,6 +83,7 @@ Foram entregues prefixos compartilhados, `SequenceOverlapPolicy` (`ExecuteImmedi
 - [x] Workflow implementado e validado por `actionlint`;
 - [x] Abrir o PR #8;
 - [x] Diagnosticar a primeira execução remota e corrigir o comando de instrumentação Android, o TFM do Docfx e a inicialização autocontida do harness Windows;
+- [x] Diagnosticar a segunda execução remota e corrigir a assinatura comum dos APKs e a reinscrição WinUI após `Unloaded`;
 - [ ] Confirmar todos os checks;
 - [ ] Tratar comentários/reviews e registrar o link aqui.
 
@@ -161,6 +162,7 @@ Foram entregues prefixos compartilhados, `SequenceOverlapPolicy` (`ExecuteImmedi
 
 - [x] Projeto AndroidX/UI Automator compilável;
 - [x] F1, F12, numpad Enter e scanner automatizados;
+- [x] APK do sample e APK de instrumentação assinados pela mesma chave efêmera no CI/Firebase;
 - [x] Workflow agendado/manual fail-closed;
 - [x] Guia de configuração e de bancada;
 - [ ] Criar Workload Identity e service account no Google Cloud;
@@ -279,6 +281,7 @@ Toda alteração ligada a um item deve atualizar este arquivo no mesmo PR:
 
 | Data | Itens | Alteração | Evidência |
 |---|---|---|---|
+| 2026-08-24 | 2, 7, 8, 14 | Segunda validação remota diagnosticada; o adapter Windows agora aguarda troca/`Loaded` antes de reinscrever conteúdo descarregado, os APKs usam uma chave efêmera comum e o restore Docfx recebe o TFM já na avaliação MSBuild | Evento WinUI nativo down/up e foreground confirmados no CI; certificados dos dois APKs com o mesmo SHA-256; Docfx restrito a `net10.0-android` com 0 warnings localmente |
 | 2026-08-24 | 2, 7, 12, 14 | Primeira validação remota diagnosticada; corrigidos instrumentação Android multiline, restore Docfx multi-TFM, bootstrap autocontido/associação tardia da janela WinUI e descarte/parada de timers apontados na revisão | Regressão do timer reproduzida antes da correção; 248 testes; build Windows autocontido; Docfx 0 warnings; actionlint 1.7.12 |
 | 2026-08-24 | 2, 7, 14 | PR de conclusão aberto; checks de runtime/plataforma/documentação iniciados | [PR #8](https://github.com/afernandes/GlobalKeyboardCapture.Maui/pull/8) |
 | 2026-08-24 | 1, 6-15 | Matriz final e implementação de layout Apple, runtime Windows, device farm, API compatibility, supply chain, routing, sequências, métricas, Docfx e decisão de expansão | 248 testes; quatro builds; pacote 2.0.0 inspecionado; Docfx/actionlint; APK UI Automator; benchmark policy |
