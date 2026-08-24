@@ -223,7 +223,7 @@ internal static class WindowsRuntimeIntegration
 
     private static async Task SendWindowKeyAsync(nint windowHandle, byte virtualKey)
     {
-        if (!TryActivateWindow(windowHandle))
+        if (GetForegroundWindow() != windowHandle && !TryActivateWindow(windowHandle))
             throw new InvalidOperationException("Unable to activate the WinUI window before SendInput.");
 
         SendKeyboardInput(virtualKey, keyUp: false);
@@ -286,7 +286,6 @@ internal static class WindowsRuntimeIntegration
             BringWindowToTop(windowHandle);
             SetForegroundWindow(windowHandle);
             SetActiveWindow(windowHandle);
-            SetFocus(windowHandle);
             return GetForegroundWindow() == windowHandle;
         }
         finally
@@ -330,9 +329,6 @@ internal static class WindowsRuntimeIntegration
 
     [DllImport("user32.dll")]
     private static extern nint SetActiveWindow(nint windowHandle);
-
-    [DllImport("user32.dll")]
-    private static extern nint SetFocus(nint windowHandle);
 
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(
