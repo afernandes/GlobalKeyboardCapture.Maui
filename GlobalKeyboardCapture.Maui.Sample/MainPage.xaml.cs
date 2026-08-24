@@ -50,6 +50,7 @@ public partial class MainPage : ContentPage
 
         _keyDisplayHandler.KeyPressed += OnKeyPressed;
         _barcodeHandler.ScanCompleted += OnScanCompleted;
+        _sequenceHandler.ProgressChanged += OnSequenceProgressChanged;
         _keyHandlerService.DiagnosticEvent += OnDiagnosticEvent;
 
         _pageScope = _keyHandlerService.CreateScope("Main diagnostics page");
@@ -62,6 +63,10 @@ public partial class MainPage : ContentPage
         TryRegisterGlobalHotkey();
         CaptureScopeSwitch.IsToggled = true;
         UpdatePipelineStatus();
+#if WINDOWS
+        if (Window is not null)
+            WindowsRuntimeIntegration.TryStart(Window, _keyHandlerService, _globalHotkeyService);
+#endif
 #if ANDROID
         Android.Util.Log.Info(
             "GKC.Integration",
@@ -83,6 +88,8 @@ public partial class MainPage : ContentPage
         _pageScope = null;
         _keyDisplayHandler.KeyPressed -= OnKeyPressed;
         _barcodeHandler.ScanCompleted -= OnScanCompleted;
+        _sequenceHandler.ProgressChanged -= OnSequenceProgressChanged;
+        _sequenceHandler.CancelPendingSequences();
         _keyHandlerService.DiagnosticEvent -= OnDiagnosticEvent;
         UpdatePipelineStatus();
         base.OnDisappearing();
@@ -99,7 +106,11 @@ public partial class MainPage : ContentPage
             ShowMessage("Operation cancelled.")));
         _gestureRegistrations.Add(_sequenceHandler.RegisterSequence(
             ["Ctrl+K", "Ctrl+C"],
-            () => ShowMessage("Ctrl+K, Ctrl+C sequence completed."),
+            () => ShowMessage("Short Ctrl+K, Ctrl+C sequence completed."),
+            TimeSpan.FromSeconds(1.5)));
+        _gestureRegistrations.Add(_sequenceHandler.RegisterSequence(
+            ["Ctrl+K", "Ctrl+C", "Ctrl+D"],
+            () => ShowMessage("Longest Ctrl+K, Ctrl+C, Ctrl+D sequence completed."),
             TimeSpan.FromSeconds(1.5)));
     }
 
@@ -175,6 +186,28 @@ public partial class MainPage : ContentPage
             while (_diagnostics.Count > MAX_DIAGNOSTIC_ENTRIES)
                 _diagnostics.RemoveAt(_diagnostics.Count - 1);
         });
+    }
+
+    private void OnSequenceProgressChanged(object? sender, EventArgs e)
+    {
+        var progress = _sequenceHandler.GetProgressSnapshot();
+        MainThread.BeginInvokeOnMainThread(() =>
+        {
+            SequenceStatusLabel.Text = progress.Count == 0
+                ? "No pending sequence."
+                : string.Join(
+                    " · ",
+                    progress.Select(item =>
+                        $"{item.Sequence}: {item.MatchedGestureCount}/{item.GestureCount}"));
+        });
+    }
+
+    private void OnCancelSequenceClicked(object? sender, EventArgs e)
+    {
+        var cancelled = _sequenceHandler.CancelPendingSequences();
+        ShowMessage(cancelled
+            ? "Pending sequence cancelled."
+            : "No sequence was pending.");
     }
 
     private void OnCaptureScopeToggled(object? sender, ToggledEventArgs e)

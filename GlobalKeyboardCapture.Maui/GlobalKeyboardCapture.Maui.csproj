@@ -50,7 +50,7 @@
 		<Title>MAUI Global Keyboard Capture</Title>
 		<Description>Application-wide keyboard capture for .NET MAUI with keyboard-wedge barcode scanner and hotkey support.</Description>
 		<Summary>Keyboard capture, hotkeys, and barcode scanner input inside active .NET MAUI application windows.</Summary>
-		<PackageReleaseNotes>2.0 adds .NET MAUI 10 support for Android, Windows, iOS, and Mac Catalyst; typed gestures; scanner profiles; scopes and suspension; diagnostics and device metadata; key-up/repeat/async/sequence handling; multi-window lifecycle support; and Windows OS-global hotkeys. See https://github.com/afernandes/GlobalKeyboardCapture.Maui/blob/main/CHANGELOG.md for details.</PackageReleaseNotes>
+		<PackageReleaseNotes>2.0 adds .NET MAUI 10 support for Android, Windows, iOS, and Mac Catalyst; typed gestures; scanner profiles; device routing; scopes and suspension; diagnostics and opt-in metrics; key-up/repeat/async/advanced-sequence handling; layout-aware Apple symbols; multi-window lifecycle support; and Windows OS-global hotkeys. See https://github.com/afernandes/GlobalKeyboardCapture.Maui/blob/main/CHANGELOG.md for details.</PackageReleaseNotes>
 
 		<!-- Metadados -->
 		<Copyright>Copyright $([System.DateTime]::Now.ToString(`yyyy`)) © Anderson Fernandes do Nascimento</Copyright>
@@ -96,5 +96,7 @@
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
 	</ItemGroup>
+
+	<Import Project="..\eng\ApiCompatibility.props" />
 
 </Project>

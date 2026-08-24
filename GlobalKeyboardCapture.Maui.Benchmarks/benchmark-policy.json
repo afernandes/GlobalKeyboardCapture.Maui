@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "baselineVersion": "2.0.0-rc",
+  "regressionThresholdPercent": 20,
+  "allocationRegressionBytesPerOperation": 16,
+  "requiredBenchmarks": [
+    "CanonicalEventString",
+    "ParseCanonicalGesture",
+    "HotkeyLookup",
+    "ScannerBuffering",
+    "MetricsDisabled",
+    "MetricsEnabled"
+  ],
+  "notes": "Refresh measured baselines only after reviewing runtime, SDK, CPU, and operating-system changes. The scheduled workflow records evidence; the ordinary PR CI remains deterministic."
+}

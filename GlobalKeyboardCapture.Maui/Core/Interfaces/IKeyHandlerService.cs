@@ -41,6 +41,16 @@ public interface IKeyHandlerService
     /// <returns>An idempotent token that removes exactly this registration.</returns>
     IDisposable RegisterHandler(IKeyHandler handler, int priority = 0);
 
+    /// <summary>Registers a handler for events that satisfy an immutable device filter.</summary>
+    /// <param name="handler">The handler to register.</param>
+    /// <param name="deviceFilter">The platform and device criteria applied before dispatch.</param>
+    /// <param name="priority">Dispatch priority; higher values run first.</param>
+    /// <returns>An idempotent token that removes exactly this registration.</returns>
+    IDisposable RegisterHandler(
+        IKeyHandler handler,
+        Models.KeyboardDeviceFilter deviceFilter,
+        int priority = 0);
+
     /// <summary>Removes all registrations for a handler instance.</summary>
     /// <param name="handler">The handler instance to remove.</param>
     /// <returns><see langword="true"/> when at least one registration was removed.</returns>
@@ -58,4 +68,14 @@ public interface IKeyHandlerService
     /// <param name="isEnabled">Whether the scope starts enabled.</param>
     /// <returns>The new capture scope.</returns>
     IKeyboardCaptureScope CreateScope(string? name = null, bool isEnabled = true);
+
+    /// <summary>Creates a handler group restricted by an immutable device filter.</summary>
+    /// <param name="deviceFilter">The platform and device criteria shared by the scope.</param>
+    /// <param name="name">An optional diagnostic scope name.</param>
+    /// <param name="isEnabled">Whether the scope starts enabled.</param>
+    /// <returns>The new capture scope.</returns>
+    IKeyboardCaptureScope CreateScope(
+        Models.KeyboardDeviceFilter deviceFilter,
+        string? name = null,
+        bool isEnabled = true);
 }

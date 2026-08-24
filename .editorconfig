@@ -156,3 +156,9 @@ dotnet_diagnostic.CA1716.severity = suggestion
 
 # CA1303: Do not pass literals as localized parameters
 dotnet_diagnostic.CA1303.severity = none
+
+# The .NET for Android activation analyzer misclassifies the MAUI XAML Application
+# when dotnet-format creates its cross-target workspace. Real Android Release/AOT
+# builds do not report DNAA0001; keep the suppression limited to this MAUI type.
+[GlobalKeyboardCapture.Maui.Sample/App.xaml.cs]
+dotnet_diagnostic.DNAA0001.severity = none

@@ -1,0 +1,98 @@
+name: Android device farm
+
+on:
+  schedule:
+    - cron: '27 3 * * 2,5'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: android-device-farm
+  cancel-in-progress: false
+
+jobs:
+  firebase-test-lab:
+    name: Firebase physical-device matrix
+    if: vars.FIREBASE_TEST_LAB_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Java
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Authenticate to Google Cloud with OIDC
+        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Setup Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3
+        with:
+          project_id: ${{ vars.FIREBASE_PROJECT_ID }}
+
+      - name: Validate device-farm configuration
+        shell: bash
+        run: |
+          test -n '${{ vars.FIREBASE_PROJECT_ID }}'
+          test -n '${{ vars.FIREBASE_RESULTS_BUCKET }}'
+          test -n '${{ vars.FIREBASE_ANDROID_DEVICE_1 }}'
+          test -n '${{ vars.FIREBASE_ANDROID_DEVICE_2 }}'
+
+      - name: Install Android workload
+        run: dotnet workload install maui-android --ignore-failed-sources
+
+      - name: Build debuggable MAUI sample APK
+        run: dotnet build GlobalKeyboardCapture.Maui.Sample/GlobalKeyboardCapture.Maui.Sample.csproj -c Debug -f net10.0-android -p:TargetFrameworks=net10.0-android -p:AndroidPackageFormat=apk -p:RunAOTCompilation=false
+
+      - name: Build UI Automator test APK
+        run: gradle -p eng/android-device-tests :app:assembleDebugAndroidTest --no-daemon
+
+      - name: Run physical-device matrix
+        shell: bash
+        run: |
+          app_apk="$(find GlobalKeyboardCapture.Maui.Sample/bin/Debug/net10.0-android -name '*-Signed.apk' -print -quit)"
+          test_apk="eng/android-device-tests/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
+          results_dir="gkc/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          gcloud firebase test android run \
+            --project='${{ vars.FIREBASE_PROJECT_ID }}' \
+            --type=instrumentation \
+            --app="$app_apk" \
+            --test="$test_apk" \
+            --device='${{ vars.FIREBASE_ANDROID_DEVICE_1 }}' \
+            --device='${{ vars.FIREBASE_ANDROID_DEVICE_2 }}' \
+            --timeout=15m \
+            --num-flaky-test-attempts=1 \
+            --results-bucket='${{ vars.FIREBASE_RESULTS_BUCKET }}' \
+            --results-dir="$results_dir"
+          mkdir -p firebase-results
+          gcloud storage cp --recursive \
+            "${{ vars.FIREBASE_RESULTS_BUCKET }}/$results_dir/**" \
+            firebase-results/
+
+      - name: Upload Firebase diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: firebase-android-device-results
+          path: firebase-results/
+          if-no-files-found: warn
+          retention-days: 30

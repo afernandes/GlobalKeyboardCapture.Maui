@@ -9,6 +9,8 @@ Application-wide physical-keyboard capture for .NET MAUI, with typed hotkeys, ke
 
 > **Application-wide is not OS-global.** Normal handlers capture keys while one of the application's windows is active. `IGlobalHotkeyService` is a separate Windows-only feature that can activate while another application has focus.
 
+Guides and generated API reference: [project documentation](https://afernandes.github.io/GlobalKeyboardCapture.Maui/).
+
 ## Supported versions and platforms
 
 | Package line | .NET MAUI | Android | Windows | iOS | Mac Catalyst | Policy |
@@ -242,6 +244,32 @@ keyboard.DiagnosticEvent += (_, diagnostic) =>
 
 Normalized events expose platform, event type, physical location, native key/scan codes, repeat count, and `KeyboardDeviceInfo`. Native device metadata is best effort; Apple exposes the coalesced physical keyboard rather than a per-device identifier.
 
+## Route input by device
+
+Use an immutable filter on a registration or scope. Registration and scope filters are combined with AND semantics.
+
+```csharp
+var scannerFilter = new KeyboardDeviceFilter(
+    deviceId: 12,
+    isExternal: true,
+    platform: KeyboardPlatform.Android);
+
+using IDisposable registration = keyboard.RegisterHandler(
+    barcodeHandler,
+    scannerFilter,
+    priority: 100);
+
+using IKeyboardCaptureScope scope = keyboard.CreateScope(
+    scannerFilter,
+    "Dedicated checkout scanner");
+```
+
+Device metadata is best effort. A filter with device-specific criteria rejects events whose platform cannot identify the source; a platform-only filter does not require `KeyboardDeviceInfo`.
+
+## Opt-in metrics
+
+Set `options.EnableMetrics = true` only when a `MeterListener` or OpenTelemetry pipeline consumes the meter `GlobalKeyboardCapture.Maui`. Stable counters cover received, dispatched, ignored, repeated, handler invocation/error counts, and handler duration. Metrics are disabled by default; the disabled dispatch path does not initialize instruments or read a clock.
+
 ## Key-up and repeat events
 
 ```csharp
@@ -254,13 +282,23 @@ Built-in hotkey, scanner, and sequence handlers react only to key-down. Custom h
 ## Key sequences
 
 ```csharp
+options.SequenceOverlapPolicy = SequenceOverlapPolicy.PreferLongest;
+
 IDisposable sequenceRegistration = sequenceHandler.RegisterSequence(
     ["Ctrl+K", "Ctrl+C"],
     CommentSelection,
     timeout: TimeSpan.FromSeconds(1.5));
+
+sequenceHandler.ProgressChanged += (_, _) =>
+{
+    IReadOnlyList<KeySequenceProgress> progress =
+        sequenceHandler.GetProgressSnapshot();
+};
+
+sequenceHandler.CancelPendingSequences();
 ```
 
-Sequences require at least two gestures, reject repeat events, reset after the timeout, and execute actions on the MAUI main thread.
+Sequences require at least two gestures, reject repeat events, reset after the timeout, and execute actions on the MAUI main thread. `ExecuteImmediately` preserves the historical behavior, `PreferLongest` defers a completed prefix until the longer sequence wins or times out, and `RejectAmbiguous` fails registration. Progress snapshots are detached and cancellation keeps registrations intact.
 
 ## Asynchronous handlers
 
@@ -317,13 +355,13 @@ Synchronous handlers run on the native input thread. Keep them short and marshal
 | Prevent native propagation when handled | ✅ | ✅ | No; Apple GameController keyboard events are observational |
 | True OS-global activation | ✅ | — | — |
 
-Keyboard layouts can change printable symbols. Windows and Android use platform labels where available; the Apple implementation currently maps USB HID usages with a US-style symbol table. Use `NativeKeyCode` and diagnostics when a layout-specific character matters.
+Keyboard layouts can change printable symbols. Windows and Android use platform labels where available. Apple accepts an optional `IKeyboardLayoutTranslator`; the sample feeds `KeyboardLayoutTranslationCache` from UIKit's layout-aware `UIKey.Characters` and retains the US-style USB HID map as fallback. Use `NativeKeyCode` and diagnostics when physical position matters.
 
 ## Lifecycle, trimming, and AOT
 
 `UseKeyboardHandling()` attaches native sources when platform views are created and releases them when views are destroyed. Windows supports concurrent windows. Android preserves and forwards the original `Window.Callback` and safely rebinds after Activity recreation.
 
-The package is marked `IsTrimmable` and `IsAotCompatible`, does not root its entire assembly, and contains no reflection-based key mapping. CI builds every platform, runs the platform-neutral suite on Windows and Linux, packages symbols, and injects F1, F12, and numpad Enter in an Android emulator.
+The package is marked `IsTrimmable` and `IsAotCompatible`, does not root its entire assembly, and contains no reflection-based key mapping. CI builds every platform, runs the platform-neutral suite on Windows and Linux, exercises Android UI Automator and a real WinUI window, and packages symbols. A gated nightly workflow reuses the Android instrumentation APK in Firebase Test Lab physical devices once repository OIDC variables are configured.
 
 ## Migrating from 1.x to 2.x
 

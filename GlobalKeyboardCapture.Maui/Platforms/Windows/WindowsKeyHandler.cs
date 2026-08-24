@@ -2,9 +2,11 @@
 using GlobalKeyboardCapture.Maui.Core.Interfaces;
 using GlobalKeyboardCapture.Maui.Platforms.Windows;
 using Microsoft.UI.Input;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Input;
 using Windows.System;
 using Windows.UI.Core;
+using DispatcherQueueTimer = Microsoft.UI.Dispatching.DispatcherQueueTimer;
 using KeyEventArgs = GlobalKeyboardCapture.Maui.Core.Models.KeyEventArgs;
 
 namespace GlobalKeyboardCapture.Maui;
@@ -36,6 +38,7 @@ internal sealed class WindowsKeyHandler : IPlatformKeyHandler, IDisposable
 
     public void ConfigureHandler(Action<KeyEventArgs> onKeyPressed)
     {
+        ArgumentNullException.ThrowIfNull(onKeyPressed);
         _onKeyPressed = onKeyPressed;
     }
 
@@ -48,12 +51,12 @@ internal sealed class WindowsKeyHandler : IPlatformKeyHandler, IDisposable
     public void Attach(object platformView)
     {
         ArgumentNullException.ThrowIfNull(platformView);
-        ThrowIfDisposed();
         if (platformView is not Microsoft.UI.Xaml.Window window)
             throw new ArgumentException("The Windows platform view must be a WinUI Window.", nameof(platformView));
 
         lock (_lockObject)
         {
+            ThrowIfDisposed();
             if (_subscriptions.ContainsKey(window))
                 return;
 
@@ -61,6 +64,7 @@ internal sealed class WindowsKeyHandler : IPlatformKeyHandler, IDisposable
             _subscriptions.Add(window, subscription);
             window.Activated += OnWindowActivated;
             TrySubscribe(subscription);
+            StartContentRetry(subscription);
         }
     }
 
@@ -72,7 +76,53 @@ internal sealed class WindowsKeyHandler : IPlatformKeyHandler, IDisposable
         lock (_lockObject)
         {
             if (_subscriptions.TryGetValue(window, out var subscription))
+            {
                 TrySubscribe(subscription);
+                StartContentRetry(subscription);
+            }
+        }
+    }
+
+    private void OnSubscribedContentUnloaded(object sender, RoutedEventArgs args)
+    {
+        lock (_lockObject)
+        {
+            foreach (var subscription in _subscriptions.Values)
+            {
+                if (!ReferenceEquals(subscription.SubscribedContent, sender))
+                    continue;
+
+                StartContentRetry(subscription);
+                subscription.Window.DispatcherQueue.TryEnqueue(() =>
+                {
+                    lock (_lockObject)
+                    {
+                        if (!_subscriptions.TryGetValue(subscription.Window, out var current)
+                            || !ReferenceEquals(current, subscription))
+                        {
+                            return;
+                        }
+
+                        TrySubscribe(subscription);
+                    }
+                });
+                return;
+            }
+        }
+    }
+
+    private void OnContentRetry(DispatcherQueueTimer sender, object args)
+    {
+        lock (_lockObject)
+        {
+            foreach (var subscription in _subscriptions.Values)
+            {
+                if (!ReferenceEquals(subscription.ContentRetryTimer, sender))
+                    continue;
+
+                TrySubscribe(subscription);
+                return;
+            }
         }
     }
 
@@ -89,12 +139,31 @@ internal sealed class WindowsKeyHandler : IPlatformKeyHandler, IDisposable
         {
             subscription.SubscribedContent.PreviewKeyDown -= OnKeyDown;
             subscription.SubscribedContent.PreviewKeyUp -= OnKeyUp;
+            if (subscription.SubscribedContent is FrameworkElement oldFrameworkElement)
+                oldFrameworkElement.Unloaded -= OnSubscribedContentUnloaded;
         }
         content.PreviewKeyDown += OnKeyDown;
         if (_options.CaptureKeyUp)
             content.PreviewKeyUp += OnKeyUp;
+        if (content is FrameworkElement frameworkElement)
+            frameworkElement.Unloaded += OnSubscribedContentUnloaded;
         subscription.SubscribedContent = content;
         return true;
+    }
+
+    private void StartContentRetry(WindowSubscription subscription)
+    {
+        if (subscription.ContentRetryTimer is null)
+        {
+            var timer = subscription.Window.DispatcherQueue.CreateTimer();
+            timer.Interval = TimeSpan.FromMilliseconds(50);
+            timer.IsRepeating = true;
+            timer.Tick += OnContentRetry;
+            subscription.ContentRetryTimer = timer;
+        }
+
+        if (!subscription.ContentRetryTimer.IsRunning)
+            subscription.ContentRetryTimer.Start();
     }
 
     public bool Detach(object platformView)
@@ -115,10 +184,18 @@ internal sealed class WindowsKeyHandler : IPlatformKeyHandler, IDisposable
     private void Unsubscribe(WindowSubscription subscription)
     {
         subscription.Window.Activated -= OnWindowActivated;
+        if (subscription.ContentRetryTimer is not null)
+        {
+            subscription.ContentRetryTimer.Stop();
+            subscription.ContentRetryTimer.Tick -= OnContentRetry;
+            subscription.ContentRetryTimer = null;
+        }
         if (subscription.SubscribedContent != null)
         {
             subscription.SubscribedContent.PreviewKeyDown -= OnKeyDown;
             subscription.SubscribedContent.PreviewKeyUp -= OnKeyUp;
+            if (subscription.SubscribedContent is FrameworkElement frameworkElement)
+                frameworkElement.Unloaded -= OnSubscribedContentUnloaded;
             subscription.SubscribedContent = null;
         }
     }
@@ -212,6 +289,9 @@ internal sealed class WindowsKeyHandler : IPlatformKeyHandler, IDisposable
     {
         lock (_lockObject)
         {
+            if (_isDisposed)
+                return;
+
             foreach (var subscription in _subscriptions.Values)
                 Unsubscribe(subscription);
             _subscriptions.Clear();
@@ -225,11 +305,17 @@ internal sealed class WindowsKeyHandler : IPlatformKeyHandler, IDisposable
 
     public void Dispose()
     {
-        if (_isDisposed)
-            return;
+        lock (_lockObject)
+        {
+            if (_isDisposed)
+                return;
 
-        Cleanup();
-        _isDisposed = true;
+            foreach (var subscription in _subscriptions.Values)
+                Unsubscribe(subscription);
+            _subscriptions.Clear();
+            _isDisposed = true;
+        }
+
         GC.SuppressFinalize(this);
     }
 
@@ -248,5 +334,6 @@ internal sealed class WindowsKeyHandler : IPlatformKeyHandler, IDisposable
     {
         public Microsoft.UI.Xaml.Window Window { get; } = window;
         public Microsoft.UI.Xaml.UIElement? SubscribedContent { get; set; }
+        public DispatcherQueueTimer? ContentRetryTimer { get; set; }
     }
 }

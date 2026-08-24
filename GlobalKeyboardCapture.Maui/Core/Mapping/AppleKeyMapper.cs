@@ -4,7 +4,30 @@ namespace GlobalKeyboardCapture.Maui.Core.Mapping;
 
 internal static class AppleKeyMapper
 {
-    public static AppleKeyMapping Map(int keyCode, bool shift, bool capsLock)
+    public static AppleKeyMapping Map(int keyCode, bool shift, bool capsLock) =>
+        Map(keyCode, shift, capsLock, translatedCharacter: null);
+
+    public static AppleKeyMapping Map(
+        int keyCode,
+        bool shift,
+        bool capsLock,
+        char? translatedCharacter)
+    {
+        var fallback = MapHid(keyCode, shift, capsLock);
+        if (fallback.Key is not (KeyboardKey.Character or KeyboardKey.None)
+            || keyCode is >= 0xE0 and <= 0xE7)
+        {
+            return fallback;
+        }
+
+        return translatedCharacter is { } character
+            && !char.IsControl(character)
+            && !char.IsSurrogate(character)
+                ? Character(character, fallback.Location)
+                : fallback;
+    }
+
+    private static AppleKeyMapping MapHid(int keyCode, bool shift, bool capsLock)
     {
         if (keyCode is >= 0x04 and <= 0x1D)
         {

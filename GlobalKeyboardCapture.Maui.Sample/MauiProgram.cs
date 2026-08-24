@@ -24,8 +24,15 @@ namespace GlobalKeyboardCapture.Maui.Sample
 
             builder.Services.AddTransient<MainPage>();
 
+            var layoutTranslationCache =
+                new global::GlobalKeyboardCapture.Maui.Core.Services.KeyboardLayoutTranslationCache();
+            builder.Services.AddSingleton(layoutTranslationCache);
+
             builder.Services.AddKeyboardHandling(options =>
             {
+                options.KeyboardLayoutTranslator = layoutTranslationCache;
+                options.SequenceOverlapPolicy =
+                    global::GlobalKeyboardCapture.Maui.Core.Models.SequenceOverlapPolicy.PreferLongest;
                 options.EnableDiagnostics = true;
                 options.CaptureKeyUp = true;
                 options.AllowKeyRepeat = false;

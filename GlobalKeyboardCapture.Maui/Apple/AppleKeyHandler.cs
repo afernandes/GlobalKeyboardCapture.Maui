@@ -137,14 +137,46 @@ internal sealed class AppleKeyHandler : IPlatformKeyHandler, IDisposable
             || IsPressed(keyboard, GCKeyCode.RightShift);
         var meta = IsPressed(keyboard, GCKeyCode.LeftGui)
             || IsPressed(keyboard, GCKeyCode.RightGui);
-        var mapping = AppleKeyMapper.Map(nativeKeyCode, shift, capsLock);
+        var modifiers = KeyModifiers.None;
+        if (control) modifiers |= KeyModifiers.Control;
+        if (alt) modifiers |= KeyModifiers.Alt;
+        if (shift) modifiers |= KeyModifiers.Shift;
+        if (meta) modifiers |= KeyModifiers.Meta;
+
+#if IOS
+        const KeyboardPlatform platform = KeyboardPlatform.iOS;
+#else
+        const KeyboardPlatform platform = KeyboardPlatform.MacCatalyst;
+#endif
+        char? translatedCharacter = null;
+        var translator = _options.KeyboardLayoutTranslator;
+        if (translator is not null)
+        {
+            var context = new KeyboardLayoutTranslationContext(
+                platform,
+                nativeKeyCode,
+                modifiers,
+                capsLock);
+            try
+            {
+                if (translator.TryTranslate(in context, out var translated))
+                    translatedCharacter = translated;
+            }
+            catch (Exception exception)
+            {
+                System.Diagnostics.Debug.WriteLine(
+                    $"[GlobalKeyboardCapture] Keyboard layout translator threw: {exception}");
+            }
+        }
+
+        var mapping = AppleKeyMapper.Map(
+            nativeKeyCode,
+            shift,
+            capsLock,
+            translatedCharacter);
         var keyEvent = new KeyEventArgs
         {
-#if IOS
-            Platform = KeyboardPlatform.iOS,
-#else
-            Platform = KeyboardPlatform.MacCatalyst,
-#endif
+            Platform = platform,
             EventType = pressed ? KeyboardEventType.KeyDown : KeyboardEventType.KeyUp,
             Location = mapping.Location,
             NativeKeyCode = nativeKeyCode,

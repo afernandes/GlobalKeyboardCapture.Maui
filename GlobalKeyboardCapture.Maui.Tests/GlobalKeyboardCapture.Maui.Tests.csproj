@@ -26,13 +26,17 @@
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyEventArgs.cs" Link="Linked\KeyEventArgs.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\BarcodeScanResult.cs" Link="Linked\BarcodeScanResult.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyboardDeviceInfo.cs" Link="Linked\KeyboardDeviceInfo.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyboardDeviceFilter.cs" Link="Linked\KeyboardDeviceFilter.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyboardDiagnosticEventArgs.cs" Link="Linked\KeyboardDiagnosticEventArgs.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyboardEventType.cs" Link="Linked\KeyboardEventType.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyboardKey.cs" Link="Linked\KeyboardKey.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyboardPlatform.cs" Link="Linked\KeyboardPlatform.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyboardLayoutTranslationContext.cs" Link="Linked\KeyboardLayoutTranslationContext.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyGesture.cs" Link="Linked\KeyGesture.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyLocation.cs" Link="Linked\KeyLocation.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyModifiers.cs" Link="Linked\KeyModifiers.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeySequenceProgress.cs" Link="Linked\KeySequenceProgress.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\SequenceOverlapPolicy.cs" Link="Linked\SequenceOverlapPolicy.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IKeyHandler.cs" Link="Linked\IKeyHandler.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IAsyncKeyHandler.cs" Link="Linked\IAsyncKeyHandler.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IKeyHandlerService.cs" Link="Linked\IKeyHandlerService.cs" />
@@ -41,7 +45,10 @@
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IGlobalHotkeyService.cs" Link="Linked\IGlobalHotkeyService.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IPlatformKeyHandler.cs" Link="Linked\IPlatformKeyHandler.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IPlatformViewLifecycleSink.cs" Link="Linked\IPlatformViewLifecycleSink.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IKeyboardLayoutTranslator.cs" Link="Linked\IKeyboardLayoutTranslator.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Services\KeyHandlerService.cs" Link="Linked\KeyHandlerService.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Services\KeyboardMetrics.cs" Link="Linked\KeyboardMetrics.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Services\KeyboardLayoutTranslationCache.cs" Link="Linked\KeyboardLayoutTranslationCache.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Services\UnsupportedGlobalHotkeyService.cs" Link="Linked\UnsupportedGlobalHotkeyService.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Services\NoOpPlatformKeyHandler.cs" Link="Linked\NoOpPlatformKeyHandler.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Configuration\KeyHandlerOptions.cs" Link="Linked\KeyHandlerOptions.cs" />
@@ -50,6 +57,7 @@
     <Compile Include="..\GlobalKeyboardCapture.Maui\Handlers\BarcodeHandler.cs" Link="Linked\BarcodeHandler.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Handlers\KeyHandlerLifecycleHandler.cs" Link="Linked\KeyHandlerLifecycleHandler.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Handlers\KeySequenceHandler.cs" Link="Linked\KeySequenceHandler.cs" />
+    <Compile Include="..\docs\snippets\ScenarioExamples.cs" Link="Documentation\ScenarioExamples.cs" />
   </ItemGroup>
 
   <ItemGroup>

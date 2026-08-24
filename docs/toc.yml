@@ -1,0 +1,30 @@
+- name: Visão geral
+  href: index.md
+- name: Primeiros passos
+  href: getting-started.md
+- name: Hotkeys
+  href: hotkeys.md
+- name: Scanner keyboard-wedge
+  href: scanner.md
+- name: Kiosk e checkout
+  href: kiosk.md
+- name: Sequências
+  href: sequences.md
+- name: Roteamento por dispositivo
+  href: device-routing.md
+- name: Layouts Apple
+  href: apple-layouts.md
+- name: Multi-janela e lifecycle
+  href: multi-window.md
+- name: Validação Android em aparelhos
+  href: android-device-validation.md
+- name: Expansão de plataformas
+  href: platform-expansion.md
+- name: Métricas e performance
+  href: metrics.md
+- name: Troubleshooting
+  href: troubleshooting.md
+- name: Release e supply chain
+  href: release.md
+- name: API
+  href: api/
