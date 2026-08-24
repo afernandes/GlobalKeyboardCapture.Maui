@@ -1,4 +1,4 @@
-using GlobalKeyboardCapture.Maui.Configuration;
+﻿using GlobalKeyboardCapture.Maui.Configuration;
 using GlobalKeyboardCapture.Maui.Core.Models;
 using GlobalKeyboardCapture.Maui.Core.Services;
 using GlobalKeyboardCapture.Maui.Handlers;

@@ -1,4 +1,4 @@
-using GlobalKeyboardCapture.Maui.Configuration;
+﻿using GlobalKeyboardCapture.Maui.Configuration;
 using GlobalKeyboardCapture.Maui.Core.Models;
 using GlobalKeyboardCapture.Maui.Core.Services;
 using GlobalKeyboardCapture.Maui.Tests.TestDoubles;
@@ -8,6 +8,18 @@ namespace GlobalKeyboardCapture.Maui.Tests;
 
 public class KeyHandlerServiceTests
 {
+    [Fact]
+    public void CompatibilityConstructorUsesDefaultOptions()
+    {
+        var platform = new FakePlatformKeyHandler();
+
+        using var service = new KeyHandlerService(
+            platform,
+            NullLogger<KeyHandlerService>.Instance);
+
+        service.Should().NotBeNull();
+    }
+
     private static (KeyHandlerService svc, FakePlatformKeyHandler platform) Build(
         KeyHandlerOptions? options = null)
     {
@@ -23,6 +35,33 @@ public class KeyHandlerServiceTests
         var key = new KeyEventArgs();
         Action act = () => platform.Dispatch(key);
         act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void KeyUpAndAutoRepeatAreSuppressedByDefault()
+    {
+        var (svc, platform) = Build();
+        var recorder = new RecordingKeyHandler();
+        svc.RegisterHandler(recorder);
+
+        platform.Dispatch(new KeyEventArgs { Character = 'A', EventType = KeyboardEventType.KeyUp });
+        platform.Dispatch(new KeyEventArgs { Character = 'A', RepeatCount = 1 });
+
+        recorder.HandledKeys.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void KeyUpAndAutoRepeatCanBeEnabledIndependently()
+    {
+        var options = new KeyHandlerOptions { CaptureKeyUp = true, AllowKeyRepeat = true };
+        var (svc, platform) = Build(options);
+        var recorder = new RecordingKeyHandler();
+        svc.RegisterHandler(recorder);
+
+        platform.Dispatch(new KeyEventArgs { Character = 'A', EventType = KeyboardEventType.KeyUp });
+        platform.Dispatch(new KeyEventArgs { Character = 'A', RepeatCount = 1 });
+
+        recorder.HandledKeys.Should().HaveCount(2);
     }
 
     [Fact]
@@ -106,6 +145,57 @@ public class KeyHandlerServiceTests
         svc.Initialize(new object());
 
         platform.InitializeCallCount.Should().Be(2);
+    }
+
+    [Fact]
+    public void PlatformViewLeasesAttachOnceAndDetachAfterLastLease()
+    {
+        var (svc, platform) = Build();
+        var view = new object();
+
+        var first = svc.AttachPlatformView(view);
+        var second = svc.AttachPlatformView(view);
+
+        svc.PlatformViewCount.Should().Be(1);
+        platform.InitializeCallCount.Should().Be(1);
+
+        first.Dispose();
+        platform.DetachCallCount.Should().Be(0);
+        second.Dispose();
+
+        platform.DetachCallCount.Should().Be(1);
+        svc.PlatformViewCount.Should().Be(0);
+        svc.IsInitialized.Should().BeFalse();
+    }
+
+    [Fact]
+    public void PlatformHandlerThatSupportsMultipleViewsKeepsEveryAttachment()
+    {
+        var (svc, platform) = Build();
+        var firstView = new object();
+        var secondView = new object();
+
+        using var first = svc.AttachPlatformView(firstView);
+        using var second = svc.AttachPlatformView(secondView);
+
+        svc.PlatformViewCount.Should().Be(2);
+        platform.AttachedViews.Should().BeEquivalentTo([firstView, secondView]);
+    }
+
+    [Fact]
+    public void SingleViewPlatformDetachesOldViewDuringRebind()
+    {
+        var platform = new FakePlatformKeyHandler(supportsMultiplePlatformViews: false);
+        using var svc = new KeyHandlerService(platform, NullLogger<KeyHandlerService>.Instance);
+        var firstView = new object();
+        var secondView = new object();
+
+        using var first = svc.AttachPlatformView(firstView);
+        using var second = svc.AttachPlatformView(secondView);
+
+        svc.PlatformViewCount.Should().Be(1);
+        platform.AttachedViews.Should().ContainSingle().Which.Should().BeSameAs(secondView);
+        platform.DetachedViews.Should().ContainSingle().Which.Should().BeSameAs(firstView);
     }
 
     [Fact]

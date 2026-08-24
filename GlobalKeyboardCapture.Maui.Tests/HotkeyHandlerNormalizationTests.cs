@@ -1,4 +1,4 @@
-using GlobalKeyboardCapture.Maui.Handlers;
+﻿using GlobalKeyboardCapture.Maui.Handlers;
 
 namespace GlobalKeyboardCapture.Maui.Tests;
 
@@ -68,6 +68,60 @@ public class HotkeyHandlerNormalizationTests
         // "Ctrl+Escape" must normalize to the same slot as the registered "Ctrl+Esc".
         handler.UnregisterHotkey("Ctrl+Escape").Should().BeTrue();
         handler.UnregisterHotkey("Ctrl+Esc").Should().BeFalse();
+    }
+
+    [Fact]
+    public void RegisterHotkey_BoolOverload_ThrowsOnUnrecognizedMultiCharKey()
+    {
+        var handler = new HotkeyHandler();
+        Action act = () => handler.RegisterHotkey("Enterr", false, false, false, () => { });
+        act.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public void RegisterHotkey_BoolOverload_AcceptsSingleCharFunctionAndNamedKeys()
+    {
+        var handler = new HotkeyHandler();
+        ((Action)(() => handler.RegisterHotkey("A", true, false, false, () => { }))).Should().NotThrow();
+        ((Action)(() => handler.RegisterHotkey("F5", false, false, false, () => { }))).Should().NotThrow();
+        ((Action)(() => handler.RegisterHotkey("Enter", false, false, false, () => { }))).Should().NotThrow();
+    }
+
+    [Theory]
+    [InlineData("F0")]
+    [InlineData("F25")]
+    [InlineData("F1X")]
+    [InlineData("F-1")]
+    public void InvalidFunctionKeyIsRejected(string key)
+    {
+        var handler = new HotkeyHandler();
+
+        var act = () => handler.RegisterHotkey(key, false, false, false, () => { });
+
+        act.Should().Throw<ArgumentException>().WithParameterName("key");
+    }
+
+    [Theory]
+    [InlineData("F1")]
+    [InlineData("F12")]
+    [InlineData("F24")]
+    public void ValidFunctionKeyIsAccepted(string key)
+    {
+        var handler = new HotkeyHandler();
+
+        var act = () => handler.RegisterHotkey(key, false, false, false, () => { });
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void MultipleMainKeysAreRejected()
+    {
+        var handler = new HotkeyHandler();
+
+        var act = () => handler.RegisterHotkey("Ctrl+A+B", () => { });
+
+        act.Should().Throw<ArgumentException>();
     }
 
     [Fact]

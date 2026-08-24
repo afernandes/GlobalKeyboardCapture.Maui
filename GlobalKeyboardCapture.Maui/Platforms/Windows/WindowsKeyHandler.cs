@@ -1,23 +1,37 @@
-﻿using Windows.System;
-using Windows.UI.Core;
+﻿using GlobalKeyboardCapture.Maui.Configuration;
 using GlobalKeyboardCapture.Maui.Core.Interfaces;
 using GlobalKeyboardCapture.Maui.Platforms.Windows;
 using Microsoft.UI.Input;
 using Microsoft.UI.Xaml.Input;
+using Windows.System;
+using Windows.UI.Core;
 using KeyEventArgs = GlobalKeyboardCapture.Maui.Core.Models.KeyEventArgs;
 
 namespace GlobalKeyboardCapture.Maui;
 
-public class WindowsKeyHandler : IPlatformKeyHandler
+internal sealed class WindowsKeyHandler : IPlatformKeyHandler, IDisposable
 {
-    private Microsoft.UI.Xaml.Window? _window;
+    private readonly object _lockObject = new();
+    private readonly Dictionary<Microsoft.UI.Xaml.Window, WindowSubscription> _subscriptions =
+        new(ReferenceEqualityComparer.Instance);
+    private readonly KeyHandlerOptions _options;
     private Action<KeyEventArgs>? _onKeyPressed;
+    private Action<Core.Models.KeyboardDiagnosticEventArgs>? _onDiagnostic;
+    private bool _isDisposed;
 
-    readonly Func<VirtualKey, CoreVirtualKeyStates> GetKeyState;
-    
+    private readonly Func<VirtualKey, CoreVirtualKeyStates> _getKeyState;
+
+    public bool SupportsMultiplePlatformViews => true;
+
     public WindowsKeyHandler()
+        : this(new KeyHandlerOptions())
     {
-        GetKeyState = InputKeyboardSource.GetKeyStateForCurrentThread;
+    }
+
+    public WindowsKeyHandler(KeyHandlerOptions options)
+    {
+        _options = options ?? throw new ArgumentNullException(nameof(options));
+        _getKeyState = InputKeyboardSource.GetKeyStateForCurrentThread;
     }
 
     public void ConfigureHandler(Action<KeyEventArgs> onKeyPressed)
@@ -25,17 +39,87 @@ public class WindowsKeyHandler : IPlatformKeyHandler
         _onKeyPressed = onKeyPressed;
     }
 
-    public void Initialize(object platformView)
+    public void ConfigureDiagnostics(Action<Core.Models.KeyboardDiagnosticEventArgs> onDiagnostic)
     {
-        if (_window?.Content != null)
-        {
-            _window.Content.PreviewKeyDown -= OnKeyDown;
-        }
+        ArgumentNullException.ThrowIfNull(onDiagnostic);
+        _onDiagnostic = onDiagnostic;
+    }
 
-        _window = platformView as Microsoft.UI.Xaml.Window;
-        if (_window?.Content != null)
+    public void Attach(object platformView)
+    {
+        ArgumentNullException.ThrowIfNull(platformView);
+        ThrowIfDisposed();
+        if (platformView is not Microsoft.UI.Xaml.Window window)
+            throw new ArgumentException("The Windows platform view must be a WinUI Window.", nameof(platformView));
+
+        lock (_lockObject)
         {
-            _window.Content.PreviewKeyDown += OnKeyDown;
+            if (_subscriptions.ContainsKey(window))
+                return;
+
+            var subscription = new WindowSubscription(window);
+            _subscriptions.Add(window, subscription);
+            window.Activated += OnWindowActivated;
+            TrySubscribe(subscription);
+        }
+    }
+
+    private void OnWindowActivated(object sender, Microsoft.UI.Xaml.WindowActivatedEventArgs args)
+    {
+        if (sender is not Microsoft.UI.Xaml.Window window)
+            return;
+
+        lock (_lockObject)
+        {
+            if (_subscriptions.TryGetValue(window, out var subscription))
+                TrySubscribe(subscription);
+        }
+    }
+
+    private bool TrySubscribe(WindowSubscription subscription)
+    {
+        var content = subscription.Window.Content;
+        if (content == null)
+            return false;
+        if (ReferenceEquals(content, subscription.SubscribedContent))
+            return true;
+
+        // Move the subscription to the exact current content element.
+        if (subscription.SubscribedContent != null)
+        {
+            subscription.SubscribedContent.PreviewKeyDown -= OnKeyDown;
+            subscription.SubscribedContent.PreviewKeyUp -= OnKeyUp;
+        }
+        content.PreviewKeyDown += OnKeyDown;
+        if (_options.CaptureKeyUp)
+            content.PreviewKeyUp += OnKeyUp;
+        subscription.SubscribedContent = content;
+        return true;
+    }
+
+    public bool Detach(object platformView)
+    {
+        if (platformView is not Microsoft.UI.Xaml.Window window)
+            return false;
+
+        lock (_lockObject)
+        {
+            if (!_subscriptions.Remove(window, out var subscription))
+                return false;
+
+            Unsubscribe(subscription);
+            return true;
+        }
+    }
+
+    private void Unsubscribe(WindowSubscription subscription)
+    {
+        subscription.Window.Activated -= OnWindowActivated;
+        if (subscription.SubscribedContent != null)
+        {
+            subscription.SubscribedContent.PreviewKeyDown -= OnKeyDown;
+            subscription.SubscribedContent.PreviewKeyUp -= OnKeyUp;
+            subscription.SubscribedContent = null;
         }
     }
 
@@ -44,14 +128,42 @@ public class WindowsKeyHandler : IPlatformKeyHandler
         if (args.Handled)
             return;
 
+        if (args.KeyStatus.WasKeyDown && !_options.AllowKeyRepeat)
+            return;
+
+        ProcessKey(args, Core.Models.KeyboardEventType.KeyDown);
+    }
+
+    private void OnKeyUp(object sender, KeyRoutedEventArgs args)
+    {
+        if (args.Handled || !_options.CaptureKeyUp)
+            return;
+
+        ProcessKey(args, Core.Models.KeyboardEventType.KeyUp);
+    }
+
+    private void ProcessKey(KeyRoutedEventArgs args, Core.Models.KeyboardEventType eventType)
+    {
         var keyEvent = new Core.Models.KeyEventArgs
         {
+            Platform = Core.Models.KeyboardPlatform.Windows,
+            EventType = eventType,
+            Location = GetKeyLocation(args.Key),
+            NativeKeyCode = (int)args.Key,
+            NativeScanCode = (int)args.KeyStatus.ScanCode,
+            NativeFlags = _onDiagnostic is null
+                ? null
+                : $"Extended={args.KeyStatus.IsExtendedKey};Menu={args.KeyStatus.IsMenuKeyDown};WasDown={args.KeyStatus.WasKeyDown}",
+            RepeatCount = eventType == Core.Models.KeyboardEventType.KeyDown && args.KeyStatus.WasKeyDown
+                ? Math.Max(1, (int)args.KeyStatus.RepeatCount)
+                : 0,
+
             // Modifiers
-            ControlKey = (GetKeyState(VirtualKey.Control) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down,
-            AltKey = (GetKeyState(VirtualKey.Menu) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down,
-            ShiftKey = (GetKeyState(VirtualKey.Shift) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down,
-            WindowsKey = ((GetKeyState(VirtualKey.LeftWindows) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down) ||
-                         ((GetKeyState(VirtualKey.RightWindows) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down),
+            ControlKey = (_getKeyState(VirtualKey.Control) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down,
+            AltKey = (_getKeyState(VirtualKey.Menu) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down,
+            ShiftKey = (_getKeyState(VirtualKey.Shift) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down,
+            WindowsKey = ((_getKeyState(VirtualKey.LeftWindows) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down) ||
+                         ((_getKeyState(VirtualKey.RightWindows) & CoreVirtualKeyStates.Down) == CoreVirtualKeyStates.Down),
 
             // Navigation
             UpKey = args.Key == VirtualKey.Up,
@@ -88,7 +200,7 @@ public class WindowsKeyHandler : IPlatformKeyHandler
 
         keyEvent.Character = character;
         keyEvent.FunctionKey = functionKey;
-        
+
 
         _onKeyPressed?.Invoke(keyEvent);
 
@@ -98,10 +210,43 @@ public class WindowsKeyHandler : IPlatformKeyHandler
 
     public void Cleanup()
     {
-        if (_window?.Content != null)
+        lock (_lockObject)
         {
-            _window.Content.PreviewKeyDown -= OnKeyDown;
+            foreach (var subscription in _subscriptions.Values)
+                Unsubscribe(subscription);
+            _subscriptions.Clear();
         }
-        _window = null;
+    }
+
+    private void ThrowIfDisposed()
+    {
+        ObjectDisposedException.ThrowIf(_isDisposed, this);
+    }
+
+    public void Dispose()
+    {
+        if (_isDisposed)
+            return;
+
+        Cleanup();
+        _isDisposed = true;
+        GC.SuppressFinalize(this);
+    }
+
+    private static Core.Models.KeyLocation GetKeyLocation(VirtualKey key)
+    {
+        if (key is >= VirtualKey.NumberPad0 and <= VirtualKey.Divide)
+            return Core.Models.KeyLocation.Numpad;
+        if (key is VirtualKey.LeftControl or VirtualKey.LeftMenu or VirtualKey.LeftShift or VirtualKey.LeftWindows)
+            return Core.Models.KeyLocation.Left;
+        if (key is VirtualKey.RightControl or VirtualKey.RightMenu or VirtualKey.RightShift or VirtualKey.RightWindows)
+            return Core.Models.KeyLocation.Right;
+        return Core.Models.KeyLocation.Standard;
+    }
+
+    private sealed class WindowSubscription(Microsoft.UI.Xaml.Window window)
+    {
+        public Microsoft.UI.Xaml.Window Window { get; } = window;
+        public Microsoft.UI.Xaml.UIElement? SubscribedContent { get; set; }
     }
 }

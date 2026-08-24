@@ -5,10 +5,10 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:local="clr-namespace:GlobalKeyboardCapture.Maui.Sample"
     Shell.FlyoutBehavior="Disabled"
-    Title="GlobalKeyboardCapture.MauiSample">
+    Title="Global Keyboard Capture">
 
     <ShellContent
-        Title="Home"
+        Title="Diagnostics"
         ContentTemplate="{DataTemplate local:MainPage}"
         Route="MainPage" />
 

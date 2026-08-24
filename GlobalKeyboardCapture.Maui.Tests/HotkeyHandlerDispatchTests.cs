@@ -1,4 +1,4 @@
-using GlobalKeyboardCapture.Maui.Core.Models;
+﻿using GlobalKeyboardCapture.Maui.Core.Models;
 using GlobalKeyboardCapture.Maui.Handlers;
 
 namespace GlobalKeyboardCapture.Maui.Tests;
@@ -6,10 +6,11 @@ namespace GlobalKeyboardCapture.Maui.Tests;
 public class HotkeyHandlerDispatchTests
 {
     [Fact]
-    public void ShouldHandleAlwaysReturnsTrue()
+    public void ShouldHandleOnlyKeyDownEvents()
     {
         var handler = new HotkeyHandler();
         handler.ShouldHandle(new KeyEventArgs()).Should().BeTrue();
+        handler.ShouldHandle(new KeyEventArgs { EventType = KeyboardEventType.KeyUp }).Should().BeFalse();
     }
 
     [Fact]

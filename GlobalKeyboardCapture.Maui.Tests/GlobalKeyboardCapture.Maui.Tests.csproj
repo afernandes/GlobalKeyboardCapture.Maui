@@ -1,7 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <UseMicrosoftTestingPlatformRunner>true</UseMicrosoftTestingPlatformRunner>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -12,21 +14,42 @@
   </PropertyGroup>
 
   <!--
-    The library multi-targets only MAUI platform TFMs (net{8,9}.0-android / -windows10...).
-    A plain net9.0 test project cannot ProjectReference a MAUI lib directly, so we
+    The library multi-targets only MAUI platform TFMs (net10.0-android / -windows10...).
+    A plain net10.0 test project cannot ProjectReference a MAUI lib directly, so we
     link the platform-agnostic source files and provide a tiny MainThread shim. This
     keeps tests fast and runnable on any OS while still exercising the real production
     code path for the logic under test.
   -->
   <ItemGroup>
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Mapping\AppleKeyMapper.cs" Link="Linked\AppleKeyMapper.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Mapping\PlatformKeyMapper.cs" Link="Linked\PlatformKeyMapper.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyEventArgs.cs" Link="Linked\KeyEventArgs.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\BarcodeScanResult.cs" Link="Linked\BarcodeScanResult.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyboardDeviceInfo.cs" Link="Linked\KeyboardDeviceInfo.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyboardDiagnosticEventArgs.cs" Link="Linked\KeyboardDiagnosticEventArgs.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyboardEventType.cs" Link="Linked\KeyboardEventType.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyboardKey.cs" Link="Linked\KeyboardKey.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyboardPlatform.cs" Link="Linked\KeyboardPlatform.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyGesture.cs" Link="Linked\KeyGesture.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyLocation.cs" Link="Linked\KeyLocation.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\KeyModifiers.cs" Link="Linked\KeyModifiers.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IKeyHandler.cs" Link="Linked\IKeyHandler.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IAsyncKeyHandler.cs" Link="Linked\IAsyncKeyHandler.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IKeyHandlerService.cs" Link="Linked\IKeyHandlerService.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\ILifecycleHandler.cs" Link="Linked\ILifecycleHandler.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IKeyboardCaptureScope.cs" Link="Linked\IKeyboardCaptureScope.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IGlobalHotkeyService.cs" Link="Linked\IGlobalHotkeyService.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IPlatformKeyHandler.cs" Link="Linked\IPlatformKeyHandler.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\IPlatformViewLifecycleSink.cs" Link="Linked\IPlatformViewLifecycleSink.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Services\KeyHandlerService.cs" Link="Linked\KeyHandlerService.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Services\UnsupportedGlobalHotkeyService.cs" Link="Linked\UnsupportedGlobalHotkeyService.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Services\NoOpPlatformKeyHandler.cs" Link="Linked\NoOpPlatformKeyHandler.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Configuration\KeyHandlerOptions.cs" Link="Linked\KeyHandlerOptions.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Configuration\BarcodeScannerProfile.cs" Link="Linked\BarcodeScannerProfile.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Handlers\HotkeyHandler.cs" Link="Linked\HotkeyHandler.cs" />
     <Compile Include="..\GlobalKeyboardCapture.Maui\Handlers\BarcodeHandler.cs" Link="Linked\BarcodeHandler.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Handlers\KeyHandlerLifecycleHandler.cs" Link="Linked\KeyHandlerLifecycleHandler.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Handlers\KeySequenceHandler.cs" Link="Linked\KeySequenceHandler.cs" />
   </ItemGroup>
 
   <ItemGroup>
@@ -36,11 +59,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
-    <PackageReference Include="xunit" Version="2.9.2" />
-    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
-    <PackageReference Include="FluentAssertions" Version="6.12.1" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
+    <PackageReference Include="xunit.v3" Version="4.0.0" />
+    <PackageReference Include="FluentAssertions" Version="6.12.2" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.11" />
   </ItemGroup>
 
 </Project>

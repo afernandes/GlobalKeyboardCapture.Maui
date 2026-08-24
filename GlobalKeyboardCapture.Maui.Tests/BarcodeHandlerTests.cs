@@ -1,4 +1,4 @@
-using GlobalKeyboardCapture.Maui.Configuration;
+﻿using GlobalKeyboardCapture.Maui.Configuration;
 using GlobalKeyboardCapture.Maui.Core.Models;
 using GlobalKeyboardCapture.Maui.Handlers;
 using GlobalKeyboardCapture.Maui.Tests.TestDoubles;
@@ -118,5 +118,61 @@ public class BarcodeHandlerTests
         var options = new KeyHandlerOptions { MinBarcodeLength = 1 };
         var handler = new BarcodeHandler(options);
         handler.Should().NotBeNull();
+    }
+
+    [Fact]
+    public void WhitespacePaddedBufferIsValidatedAfterTrim()
+    {
+        // Buffer is non-empty but trims to fewer chars than MinBarcodeLength: must not emit.
+        var (handler, _, scanned) = Build(minLength: 3);
+
+        foreach (var c in "  a  ") // 5 chars, trims to "a" (length 1) < 3
+            handler.HandleKey(new KeyEventArgs { Character = c });
+
+        var enter = new KeyEventArgs { EnterKey = true };
+        handler.HandleKey(enter);
+
+        scanned.Should().BeEmpty();
+        enter.Handled.Should().BeFalse();
+    }
+
+    [Fact]
+    public void OverflowedBufferIsDiscardedUntilTerminator()
+    {
+        // Never emit a plausible-looking tail of an overflowed barcode. Once a scan
+        // exceeds the configured maximum, discard it through its terminator.
+        var options = new KeyHandlerOptions { MinBarcodeLength = 1, MaxBarcodeLength = 4, BarcodeTimeout = 100_000 };
+        var time = new FakeTimeProvider();
+        var handler = new BarcodeHandler(options, time);
+        var scanned = new List<string>();
+        handler.BarcodeScanned += (_, code) => scanned.Add(code);
+
+        foreach (var c in "ABCDEF")
+            handler.HandleKey(new KeyEventArgs { Character = c });
+        var enter = new KeyEventArgs { EnterKey = true };
+        handler.HandleKey(enter);
+
+        scanned.Should().BeEmpty();
+        enter.Handled.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(0, 1, 10)]
+    [InlineData(-1, 1, 10)]
+    [InlineData(100, 0, 10)]
+    [InlineData(100, -1, 10)]
+    [InlineData(100, 5, 4)]
+    public void InvalidOptionsAreRejected(int timeout, int minLength, int maxLength)
+    {
+        var options = new KeyHandlerOptions
+        {
+            BarcodeTimeout = timeout,
+            MinBarcodeLength = minLength,
+            MaxBarcodeLength = maxLength
+        };
+
+        var act = () => new BarcodeHandler(options, new FakeTimeProvider());
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
     }
 }

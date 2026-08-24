@@ -1,5 +1,4 @@
 ﻿using GlobalKeyboardCapture.Maui.Configuration;
-using GlobalKeyboardCapture.MauiSample;
 using Microsoft.Extensions.Logging;
 
 namespace GlobalKeyboardCapture.Maui.Sample
@@ -25,11 +24,18 @@ namespace GlobalKeyboardCapture.Maui.Sample
 
             builder.Services.AddTransient<MainPage>();
 
-            // Adiciona o serviço de teclado com configurações personalizadas
             builder.Services.AddKeyboardHandling(options =>
             {
-                options.BarcodeTimeout = 150;
-                options.MinBarcodeLength = 5;
+                options.EnableDiagnostics = true;
+                options.CaptureKeyUp = true;
+                options.AllowKeyRepeat = false;
+                options.BarcodeProfiles.Add(new BarcodeScannerProfile("Retail")
+                {
+                    InterCharacterTimeout = TimeSpan.FromMilliseconds(150),
+                    MaxAverageInterCharacterDelay = TimeSpan.FromMilliseconds(80),
+                    MinLength = 5,
+                    MaxLength = 128
+                });
             });
 
             return builder.Build();

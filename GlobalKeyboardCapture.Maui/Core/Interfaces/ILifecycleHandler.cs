@@ -1,8 +1,13 @@
 ﻿namespace GlobalKeyboardCapture.Maui.Core.Interfaces;
 
-public interface ILifecycleHandler
+/// <summary>
+/// Coordinates platform-view attachment leases with native application lifecycle events.
+/// </summary>
+public interface ILifecycleHandler : IDisposable
 {
-    void OnStart();
-    void OnResume();
-    void OnStop();
+    /// <summary>Attaches keyboard capture to a newly created native platform view.</summary>
+    void OnPlatformViewCreated(object platformView);
+
+    /// <summary>Releases keyboard capture from a destroyed native platform view.</summary>
+    void OnPlatformViewDestroyed(object platformView);
 }

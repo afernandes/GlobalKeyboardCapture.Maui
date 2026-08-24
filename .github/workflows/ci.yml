@@ -6,6 +6,13 @@ on:
   pull_request:
     branches: [main, master]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: Test (${{ matrix.os }})
@@ -15,17 +22,12 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          dotnet-version: |
-            8.0.x
-            9.0.x
-
-      - name: Install MAUI workload
-        run: dotnet workload install maui --ignore-failed-sources
+          dotnet-version: 10.0.x
 
       - name: Restore tests
         run: dotnet restore GlobalKeyboardCapture.Maui.Tests/GlobalKeyboardCapture.Maui.Tests.csproj
@@ -34,44 +36,138 @@ jobs:
         run: dotnet build GlobalKeyboardCapture.Maui.Tests/GlobalKeyboardCapture.Maui.Tests.csproj -c Release --no-restore
 
       - name: Run tests
-        run: dotnet test GlobalKeyboardCapture.Maui.Tests/GlobalKeyboardCapture.Maui.Tests.csproj -c Release --no-build --logger "trx;LogFileName=test-results.trx"
+        run: dotnet test --project GlobalKeyboardCapture.Maui.Tests/GlobalKeyboardCapture.Maui.Tests.csproj -c Release --no-build -- --report-xunit-trx --report-xunit-trx-filename test-results.trx
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: test-results-${{ matrix.os }}
           path: '**/TestResults/*.trx'
 
-  build-library:
-    name: Build library (${{ matrix.os }})
+  build-platform:
+    name: Build ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        include:
+          - name: Android
+            os: ubuntu-latest
+            workload: maui-android
+            tfm: net10.0-android
+            sample_runtime_args: ''
+          - name: Windows
+            os: windows-latest
+            workload: maui-windows
+            tfm: net10.0-windows10.0.19041.0
+            sample_runtime_args: ''
+          - name: iOS
+            os: macos-26
+            workload: maui-ios
+            tfm: net10.0-ios
+            sample_runtime_args: -r iossimulator-arm64
+          - name: Mac Catalyst
+            os: macos-26
+            workload: maui-maccatalyst
+            tfm: net10.0-maccatalyst
+            sample_runtime_args: -r maccatalyst-arm64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
         with:
-          dotnet-version: |
-            8.0.x
-            9.0.x
+          dotnet-version: 10.0.x
 
-      - name: Install MAUI workload
+      - name: Install platform workload
+        run: dotnet workload install ${{ matrix.workload }} --ignore-failed-sources
+
+      - name: Build library
+        run: dotnet build GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -c Release -f ${{ matrix.tfm }} -p:TargetFrameworks=${{ matrix.tfm }}
+
+      - name: Build sample
+        run: dotnet build GlobalKeyboardCapture.Maui.Sample/GlobalKeyboardCapture.Maui.Sample.csproj -c Release -f ${{ matrix.tfm }} ${{ matrix.sample_runtime_args }} -p:TargetFrameworks=${{ matrix.tfm }}
+
+  android-integration:
+    name: Android key integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Java
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install Android workload
+        run: dotnet workload install maui-android --ignore-failed-sources
+
+      - name: Build Android sample APK
+        run: dotnet build GlobalKeyboardCapture.Maui.Sample/GlobalKeyboardCapture.Maui.Sample.csproj -c Release -f net10.0-android -r android-x64 -p:TargetFrameworks=net10.0-android -p:AndroidPackageFormat=apk -p:RunAOTCompilation=false
+
+      - name: Enable KVM acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Inject Android keyboard events
+        uses: reactivecircus/android-emulator-runner@c9c93e6ba9c4194322e114c40970d5983d9a07cc # v2.38.0
+        with:
+          api-level: 35
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          enable-hw-keyboard: true
+          script: |
+            adb install -r "$(find GlobalKeyboardCapture.Maui.Sample/bin/Release/net10.0-android -name '*-Signed.apk' -print -quit)"
+            adb logcat -c
+            adb shell monkey -p com.companyname.globalkeyboardcapturemauisample 1
+            timeout 60 sh -c 'until adb logcat -d -s GKC.Integration:I "*:S" | grep -F "Ready;Views=1"; do sleep 1; done'
+            timeout 30 sh -c 'until adb logcat -d -s GKC.Integration:I "*:S" | grep -F "Focused"; do sleep 1; done'
+            adb shell input keyboard keyevent 131
+            adb shell input keyboard keyevent 142
+            adb shell input keyboard keyevent 160
+            sleep 2
+            adb logcat -d -v brief > android-keyboard.log
+            grep -F 'Key=F1;NativeKeyCode=131' android-keyboard.log
+            grep -F 'Key=F12;NativeKeyCode=142' android-keyboard.log
+            grep -F 'Key=Enter;NativeKeyCode=160;Location=Numpad' android-keyboard.log
+
+      - name: Upload Android integration log
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: android-keyboard-log
+          path: android-keyboard.log
+
+  pack:
+    name: Pack NuGet
+    runs-on: windows-latest
+    needs: [test, build-platform, android-integration]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install MAUI workloads
         run: dotnet workload install maui --ignore-failed-sources
 
-      - name: Restore library
-        run: dotnet restore GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj
-
-      - name: Build library (Release)
-        run: dotnet build GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -c Release --no-restore
+      - name: Pack library
+        run: dotnet pack GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -c Release
 
       - name: Upload NuGet package
-        if: matrix.os == 'windows-latest'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: nupkg
           path: |
