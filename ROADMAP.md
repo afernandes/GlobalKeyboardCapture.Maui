@@ -22,30 +22,29 @@ Foram entregues prefixos compartilhados, `SequenceOverlapPolicy` (`ExecuteImmedi
 
 | Estado | Quantidade | Itens |
 |---|---:|---|
-| ✅ Concluído | 5 | 1, 11, 12, 13, 15 |
-| 🚧 Em validação | 3 | 2, 7, 14 |
+| ✅ Concluído | 7 | 1, 2, 7, 11, 12, 13, 15 |
+| 🚧 Em validação | 1 | 14 |
 | 🧪 Ambiente externo | 5 | 3, 4, 6, 8, 10 |
 | ⏳ Sequenciado | 2 | 5, 9 |
 
 ## Próximas ações, na ordem
 
-1. Concluir a matriz final local, abrir o PR e deixar verdes os checks, incluindo runtime Windows (itens 1, 2 e 7).
-2. Após o merge, confirmar o primeiro deploy do Pages, que já está habilitado no repositório (item 14).
+1. Mergear o PR #8 e confirmar o primeiro deploy do Pages, que já está habilitado no repositório (item 14).
+2. Executar a bancada Android e os testes Apple com hardware físico, incluindo layouts não US (itens 3, 4 e 6).
 3. Configurar Workload Identity/Firebase e NuGet Trusted Publishing nas contas externas (itens 8 e 10).
-4. Executar a bancada Android e os testes Apple com hardware físico, incluindo layouts não US (itens 3, 4 e 6).
-5. Somente com os gates P0 aprovados, publicar 2.0.0 (item 5); a publicação passa a ser o baseline automático da compatibilidade de API (item 9).
+4. Somente com os gates P0 aprovados, publicar 2.0.0 (item 5); a publicação passa a ser o baseline automático da compatibilidade de API (item 9).
 
 ## Painel priorizado
 
 | # | Pri. | Estado | Item | Engenharia entregue | Pendência objetiva |
 |---:|:---:|:---:|---|---|---|
 | 1 | P0 | ✅ | Matriz local completa | 248 testes; quatro builds; trim/AOT; format; auditoria; pacote inspecionado | Manter como gate de release |
-| 2 | P0 | 🚧 | Checks do PR | PR #8 aberto; CI ampliado para plataforma, runtime e pacote | Confirmar todos os checks e reviews |
-| 3 | P0 | 🧪 | Android em hardware real | Emulador e UI Automator automatizados | Teclados USB/Bluetooth e scanner físico |
+| 2 | P0 | ✅ | Checks do PR | CI, documentação, pacote e integrações nativas verdes; reviews resolvidas | Manter verde até o merge |
+| 3 | P0 | 🧪 | Android em hardware real | Emulador aprovou F1, F12, Enter numérico e scanner | Teclados USB/Bluetooth e scanner físico |
 | 4 | P0 | 🧪 | Apple em hardware real | Adapter, lifecycle e builds Apple prontos | iPad e Mac com teclado externo |
-| 5 | P0 | ⏳ | Publicar 2.0.0 | Workflow de release e artefatos definidos | Depende de 2, 3, 4, 8 e 10 |
+| 5 | P0 | ⏳ | Publicar 2.0.0 | Workflow de release e artefatos definidos | Depende de 3, 4, 8 e 10 |
 | 6 | P1 | 🧪 | Layout Apple | Translator/cache, collector UIKit, fallback e testes | Confirmar layouts reais em iPad/Mac |
-| 7 | P1 | 🚧 | Runtime Windows no CI | Harness WinUI e correção de troca de conteúdo | Confirmar o job no novo PR |
+| 7 | P1 | ✅ | Runtime Windows no CI | Harness aprovou os cinco cenários e publicou artifact | Manutenção contínua |
 | 8 | P1 | 🧪 | Matriz Android recorrente | UI Automator e workflow Firebase prontos | Criar WIF/variáveis e executar a primeira matriz |
 | 9 | P1 | ⏳ | Baseline de API pública | Package validation e strict API compatibility prontas | Ativação automática após existir 2.0.0 no NuGet |
 | 10 | P1 | 🧪 | Supply chain | SBOM, hashes, attestations, OIDC e smoke restore | Configurar Trusted Publisher e executar release real |
@@ -72,11 +71,11 @@ Foram entregues prefixos compartilhados, `SequenceOverlapPolicy` (`ExecuteImmedi
 - [x] Auditoria de vulnerabilidades;
 - [x] Pack e inspeção final: quatro TFMs, XML docs, README, licença, ícone e símbolos.
 
-### 2. Checks do pull request — 🚧 Em validação
+### 2. Checks do pull request — ✅ Concluído
 
 **Objetivo.** Reproduzir a entrega em runners limpos e impedir merge com regressão de plataforma.
 
-**Entregue.** Testes Windows/Linux, builds das quatro plataformas, integração Android, runtime WinUI e pack com API compatibility estão definidos no CI. O PR #7 anterior terminou com oito checks verdes e foi mergeado.
+**Entregue/evidência atual.** Testes Windows/Linux, builds das quatro plataformas, integração Android, runtime WinUI e pack com API compatibility passaram na [execução CI 32755677822](https://github.com/afernandes/GlobalKeyboardCapture.Maui/actions/runs/32755677822). O Docfx também passou na [execução 32755677876](https://github.com/afernandes/GlobalKeyboardCapture.Maui/actions/runs/32755677876). As duas threads acionáveis da revisão Copilot foram corrigidas, respondidas e resolvidas.
 
 **Critério de aceite.** O [PR #8](https://github.com/afernandes/GlobalKeyboardCapture.Maui/pull/8) deve ficar integralmente verde e sem comentário de revisão pendente.
 
@@ -85,8 +84,8 @@ Foram entregues prefixos compartilhados, `SequenceOverlapPolicy` (`ExecuteImmedi
 - [x] Diagnosticar a primeira execução remota e corrigir o comando de instrumentação Android, o TFM do Docfx e a inicialização autocontida do harness Windows;
 - [x] Diagnosticar a segunda execução remota e corrigir a assinatura comum dos APKs e a reinscrição WinUI após `Unloaded`;
 - [x] Diagnosticar a terceira execução remota, alinhar AndroidX Lifecycle 2.9.2 no processo instrumentado e eliminar a corrida entre `Loaded`, foco e a primeira tecla WinUI;
-- [ ] Confirmar todos os checks;
-- [ ] Tratar comentários/reviews e registrar o link aqui.
+- [x] Confirmar todos os checks na execução 32755677822;
+- [x] Tratar comentários/reviews e registrar as evidências no PR #8.
 
 ### 3. Android em hardware real — 🧪 Aguardando ambiente externo
 
@@ -98,6 +97,7 @@ Foram entregues prefixos compartilhados, `SequenceOverlapPolicy` (`ExecuteImmedi
 
 - [x] Caminho automatizado no emulador;
 - [x] Tela e diagnostics preparados para coleta;
+- [x] Evidência no CI de F1/F12 (`NativeKeyCode` 131/142), Enter numérico (`NativeKeyCode` 160, `Location=Numpad`) e scanner `12345`;
 - [ ] Teclado USB físico;
 - [ ] Teclado Bluetooth físico;
 - [ ] Scanner físico;
@@ -126,7 +126,7 @@ Foram entregues prefixos compartilhados, `SequenceOverlapPolicy` (`ExecuteImmedi
 
 - [x] `CurrentVersion` e release notes preparados;
 - [x] Workflow fail-closed implementado;
-- [ ] Concluir itens 2, 3, 4, 8 e 10;
+- [ ] Concluir itens 3, 4, 8 e 10;
 - [ ] Atualizar changelog com a data real;
 - [ ] Criar `v2.0.0` somente em commit contido em `main`;
 - [ ] Confirmar indexação e smoke restore antes de publicar o release.
@@ -144,7 +144,7 @@ Foram entregues prefixos compartilhados, `SequenceOverlapPolicy` (`ExecuteImmedi
 - [x] Sample e guia;
 - [ ] Confirmar em dois layouts físicos no item 4.
 
-### 7. Runtime Windows no CI — 🚧 Em validação
+### 7. Runtime Windows no CI — ✅ Concluído
 
 **Objetivo.** Testar o adapter WinUI real, não apenas seus mapas puros.
 
@@ -153,7 +153,7 @@ Foram entregues prefixos compartilhados, `SequenceOverlapPolicy` (`ExecuteImmedi
 - [x] Harness no sample sem entrar no pacote;
 - [x] Execução local interativa com todos os cenários aprovados;
 - [x] Job Windows hospedado no CI;
-- [ ] Confirmar o job no novo PR e anexar artifact.
+- [x] Job do PR #8 e artifact confirmados: `KeyDownKeyUp`, `TwoWindows`, `ContentReplacement`, `AttachDetach`, `RegisterHotKeyUnregisterHotKeyWmHotkey` e `RESULT PASS`.
 
 ### 8. Matriz Android recorrente — 🧪 Aguardando ambiente externo
 
@@ -163,6 +163,7 @@ Foram entregues prefixos compartilhados, `SequenceOverlapPolicy` (`ExecuteImmedi
 
 - [x] Projeto AndroidX/UI Automator compilável;
 - [x] F1, F12, numpad Enter e scanner automatizados;
+- [x] Execução recorrente no emulador confirmada no PR #8, com busca incremental da evidência visual e `logcat` preservado também em falhas;
 - [x] APK do sample e APK de instrumentação assinados pela mesma chave efêmera no CI/Firebase;
 - [x] Workflow agendado/manual fail-closed;
 - [x] Guia de configuração e de bancada;
@@ -282,6 +283,7 @@ Toda alteração ligada a um item deve atualizar este arquivo no mesmo PR:
 
 | Data | Itens | Alteração | Evidência |
 |---|---|---|---|
+| 2026-08-24 | 2, 3, 7, 8, 14 | Matriz do PR concluída; falso negativo do scanner removido com busca incremental no `ScrollView`; logs Android preservados em falhas | [CI 32755677822](https://github.com/afernandes/GlobalKeyboardCapture.Maui/actions/runs/32755677822) verde; artifact Android confirma F1, F12, Enter numérico e scanner; artifact Windows confirma os cinco cenários e `RESULT PASS`; [Docfx 32755677876](https://github.com/afernandes/GlobalKeyboardCapture.Maui/actions/runs/32755677876) verde |
 | 2026-08-24 | 2, 7, 8 | Terceira validação remota diagnosticada; AndroidX Lifecycle do teste alinhado ao MAUI 10 e binding WinUI passou a considerar `FrameworkElement.IsLoaded`, com probe de prontidão antes dos cenários medidos | Grafo Gradle resolve `lifecycle-common` 2.9.2; APK AndroidTest e sample Windows autocontido compilam; 248 testes e format aprovados localmente |
 | 2026-08-24 | 2, 7, 8, 14 | Segunda validação remota diagnosticada; o adapter Windows agora aguarda troca/`Loaded` antes de reinscrever conteúdo descarregado, os APKs usam uma chave efêmera comum e o restore Docfx recebe o TFM já na avaliação MSBuild | Evento WinUI nativo down/up e foreground confirmados no CI; certificados dos dois APKs com o mesmo SHA-256; Docfx restrito a `net10.0-android` com 0 warnings localmente |
 | 2026-08-24 | 2, 7, 12, 14 | Primeira validação remota diagnosticada; corrigidos instrumentação Android multiline, restore Docfx multi-TFM, bootstrap autocontido/associação tardia da janela WinUI e descarte/parada de timers apontados na revisão | Regressão do timer reproduzida antes da correção; 248 testes; build Windows autocontido; Docfx 0 warnings; actionlint 1.7.12 |
