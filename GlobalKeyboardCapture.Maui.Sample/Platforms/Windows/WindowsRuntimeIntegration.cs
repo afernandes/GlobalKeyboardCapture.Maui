@@ -16,6 +16,7 @@ internal static class WindowsRuntimeIntegration
     private const int SW_RESTORE = 9;
     private const byte VK_CONTROL = 0x11;
     private const byte VK_MENU = 0x12;
+    private const byte VK_F7 = 0x76;
     private const byte VK_F8 = 0x77;
     private const byte VK_F9 = 0x78;
     private const byte VK_F10 = 0x79;
@@ -55,6 +56,7 @@ internal static class WindowsRuntimeIntegration
     {
         var evidence = new List<string> { "INFO HarnessScheduled" };
         var exitCode = 0;
+        RuntimeRecordingHandler? recorder = null;
 
         try
         {
@@ -63,12 +65,13 @@ internal static class WindowsRuntimeIntegration
                 () => (firstWindow = page.Window) is not null,
                 "MAUI window assignment");
 
-            var recorder = new RuntimeRecordingHandler();
+            recorder = new RuntimeRecordingHandler();
             using var recorderRegistration = service.RegisterHandler(recorder, priority: int.MaxValue);
             await WaitUntilAsync(() => service.PlatformViewCount == 1, "initial window attachment");
 
             var firstNativeWindow = await WaitForNativeWindowAsync(firstWindow!);
             await ReplaceContentAndFocusAsync(firstNativeWindow, "First integration window");
+            await WaitForCaptureReadyAsync(recorder);
             await SendAndExpectAsync(recorder, KeyboardKey.F8, VK_F8);
             evidence.Add("PASS KeyDownKeyUp");
 
@@ -83,12 +86,14 @@ internal static class WindowsRuntimeIntegration
 
             var secondNativeWindow = await WaitForNativeWindowAsync(secondWindow);
             await ReplaceContentAndFocusAsync(secondNativeWindow, "Second integration window");
+            await WaitForCaptureReadyAsync(recorder);
             await SendAndExpectAsync(recorder, KeyboardKey.F9, VK_F9);
             evidence.Add("PASS TwoWindows");
 
             var replacementButton = await ReplaceContentAndFocusAsync(
                 firstNativeWindow,
                 "Replacement content");
+            await WaitForCaptureReadyAsync(recorder);
             await SendAndExpectAsync(recorder, KeyboardKey.F10, VK_F10);
             evidence.Add("PASS ContentReplacement");
 
@@ -125,6 +130,7 @@ internal static class WindowsRuntimeIntegration
             evidence.Add($"INFO NativePreviewKeyDown={Volatile.Read(ref _nativePreviewKeyDownCount)}");
             evidence.Add($"INFO NativePreviewKeyUp={Volatile.Read(ref _nativePreviewKeyUpCount)}");
             evidence.Add($"INFO ForegroundMatches={GetForegroundWindow() == _focusedWindowHandle}");
+            evidence.Add($"INFO RecordedEvents={recorder?.Describe() ?? "none"}");
             evidence.Add($"RESULT FAIL {exception}");
         }
 
@@ -195,6 +201,24 @@ internal static class WindowsRuntimeIntegration
         {
             throw new InvalidOperationException($"{key} was delivered more than once.");
         }
+    }
+
+    private static async Task WaitForCaptureReadyAsync(RuntimeRecordingHandler recorder)
+    {
+        for (var attempt = 0; attempt < 20; attempt++)
+        {
+            var downBefore = recorder.Count(KeyboardKey.F7, KeyboardEventType.KeyDown);
+            var upBefore = recorder.Count(KeyboardKey.F7, KeyboardEventType.KeyUp);
+            await SendWindowKeyAsync(_focusedWindowHandle, VK_F7);
+            await Task.Delay(100);
+            if (recorder.Count(KeyboardKey.F7, KeyboardEventType.KeyDown) == downBefore + 1
+                && recorder.Count(KeyboardKey.F7, KeyboardEventType.KeyUp) == upBefore + 1)
+            {
+                return;
+            }
+        }
+
+        throw new TimeoutException("Timed out waiting for the Windows key adapter to bind the active content.");
     }
 
     private static async Task SendWindowKeyAsync(nint windowHandle, byte virtualKey)
@@ -388,6 +412,12 @@ internal static class WindowsRuntimeIntegration
                 }
                 return count;
             }
+        }
+
+        public string Describe()
+        {
+            lock (_lockObject)
+                return string.Join(',', _events.Select(item => $"{item.Key}:{item.EventType}"));
         }
     }
 }

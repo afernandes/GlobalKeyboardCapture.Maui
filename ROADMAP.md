@@ -84,6 +84,7 @@ Foram entregues prefixos compartilhados, `SequenceOverlapPolicy` (`ExecuteImmedi
 - [x] Abrir o PR #8;
 - [x] Diagnosticar a primeira execução remota e corrigir o comando de instrumentação Android, o TFM do Docfx e a inicialização autocontida do harness Windows;
 - [x] Diagnosticar a segunda execução remota e corrigir a assinatura comum dos APKs e a reinscrição WinUI após `Unloaded`;
+- [x] Diagnosticar a terceira execução remota, alinhar AndroidX Lifecycle 2.9.2 no processo instrumentado e eliminar a corrida entre `Loaded`, foco e a primeira tecla WinUI;
 - [ ] Confirmar todos os checks;
 - [ ] Tratar comentários/reviews e registrar o link aqui.
 
@@ -147,7 +148,7 @@ Foram entregues prefixos compartilhados, `SequenceOverlapPolicy` (`ExecuteImmedi
 
 **Objetivo.** Testar o adapter WinUI real, não apenas seus mapas puros.
 
-**Entregue.** Harness opt-in que cria duas janelas, injeta key-down/up, substitui conteúdo, testa detach e valida `RegisterHotKey`/`WM_HOTKEY`/unregister. O handler acompanha o conteúdo exato, monitora substituição, fecha a corrida Attach/Dispose e interrompe o timer de retry enquanto o conteúdo está estável.
+**Entregue.** Harness opt-in que cria duas janelas, injeta key-down/up, substitui conteúdo, testa detach e valida `RegisterHotKey`/`WM_HOTKEY`/unregister. O handler acompanha o conteúdo exato, monitora substituição, fecha a corrida Attach/Dispose e mantém retry apenas até o elemento estar realmente carregado. O harness usa uma tecla-probe para separar prontidão do adapter da medição de cada cenário.
 
 - [x] Harness no sample sem entrar no pacote;
 - [x] Execução local interativa com todos os cenários aprovados;
@@ -281,6 +282,7 @@ Toda alteração ligada a um item deve atualizar este arquivo no mesmo PR:
 
 | Data | Itens | Alteração | Evidência |
 |---|---|---|---|
+| 2026-08-24 | 2, 7, 8 | Terceira validação remota diagnosticada; AndroidX Lifecycle do teste alinhado ao MAUI 10 e binding WinUI passou a considerar `FrameworkElement.IsLoaded`, com probe de prontidão antes dos cenários medidos | Grafo Gradle resolve `lifecycle-common` 2.9.2; APK AndroidTest e sample Windows autocontido compilam; 248 testes e format aprovados localmente |
 | 2026-08-24 | 2, 7, 8, 14 | Segunda validação remota diagnosticada; o adapter Windows agora aguarda troca/`Loaded` antes de reinscrever conteúdo descarregado, os APKs usam uma chave efêmera comum e o restore Docfx recebe o TFM já na avaliação MSBuild | Evento WinUI nativo down/up e foreground confirmados no CI; certificados dos dois APKs com o mesmo SHA-256; Docfx restrito a `net10.0-android` com 0 warnings localmente |
 | 2026-08-24 | 2, 7, 12, 14 | Primeira validação remota diagnosticada; corrigidos instrumentação Android multiline, restore Docfx multi-TFM, bootstrap autocontido/associação tardia da janela WinUI e descarte/parada de timers apontados na revisão | Regressão do timer reproduzida antes da correção; 248 testes; build Windows autocontido; Docfx 0 warnings; actionlint 1.7.12 |
 | 2026-08-24 | 2, 7, 14 | PR de conclusão aberto; checks de runtime/plataforma/documentação iniciados | [PR #8](https://github.com/afernandes/GlobalKeyboardCapture.Maui/pull/8) |

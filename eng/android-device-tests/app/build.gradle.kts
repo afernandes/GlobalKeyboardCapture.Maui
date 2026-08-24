@@ -39,4 +39,9 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
+
+    // AndroidX Test Core still requests lifecycle-common 2.3.1. The MAUI 10
+    // target APK ships Lifecycle 2.9.2; instrumentation shares one process and
+    // an older Lifecycle.Event in the test APK crashes EmojiCompat startup.
+    androidTestImplementation("androidx.lifecycle:lifecycle-common:2.9.2")
 }

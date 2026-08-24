@@ -112,6 +112,21 @@ internal sealed class WindowsKeyHandler : IPlatformKeyHandler, IDisposable
         }
     }
 
+    private void OnSubscribedContentLoaded(object sender, RoutedEventArgs args)
+    {
+        lock (_lockObject)
+        {
+            foreach (var subscription in _subscriptions.Values)
+            {
+                if (!ReferenceEquals(subscription.SubscribedContent, sender))
+                    continue;
+
+                RefreshContentSubscription(subscription);
+                return;
+            }
+        }
+    }
+
     private void OnUnloadedContentLoaded(object sender, RoutedEventArgs args)
     {
         lock (_lockObject)
@@ -151,7 +166,7 @@ internal sealed class WindowsKeyHandler : IPlatformKeyHandler, IDisposable
         if (ReferenceEquals(content, subscription.UnloadedContent))
             return false;
         if (ReferenceEquals(content, subscription.SubscribedContent))
-            return true;
+            return content is not FrameworkElement existingElement || existingElement.IsLoaded;
 
         // Move the subscription to the exact current content element.
         DetachSubscribedContent(subscription);
@@ -160,9 +175,12 @@ internal sealed class WindowsKeyHandler : IPlatformKeyHandler, IDisposable
         if (_options.CaptureKeyUp)
             content.PreviewKeyUp += OnKeyUp;
         if (content is FrameworkElement frameworkElement)
+        {
+            frameworkElement.Loaded += OnSubscribedContentLoaded;
             frameworkElement.Unloaded += OnSubscribedContentUnloaded;
+        }
         subscription.SubscribedContent = content;
-        return true;
+        return content is not FrameworkElement newElement || newElement.IsLoaded;
     }
 
     private void RefreshContentSubscription(WindowSubscription subscription)
@@ -247,7 +265,10 @@ internal sealed class WindowsKeyHandler : IPlatformKeyHandler, IDisposable
             subscription.SubscribedContent.PreviewKeyDown -= OnKeyDown;
             subscription.SubscribedContent.PreviewKeyUp -= OnKeyUp;
             if (subscription.SubscribedContent is FrameworkElement frameworkElement)
+            {
+                frameworkElement.Loaded -= OnSubscribedContentLoaded;
                 frameworkElement.Unloaded -= OnSubscribedContentUnloaded;
+            }
             subscription.SubscribedContent = null;
         }
     }
