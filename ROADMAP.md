@@ -82,6 +82,7 @@ Foram entregues prefixos compartilhados, `SequenceOverlapPolicy` (`ExecuteImmedi
 
 - [x] Workflow implementado e validado por `actionlint`;
 - [x] Abrir o PR #8;
+- [x] Diagnosticar a primeira execução remota e corrigir o comando de instrumentação Android, o TFM do Docfx e a inicialização autocontida do harness Windows;
 - [ ] Confirmar todos os checks;
 - [ ] Tratar comentários/reviews e registrar o link aqui.
 
@@ -145,7 +146,7 @@ Foram entregues prefixos compartilhados, `SequenceOverlapPolicy` (`ExecuteImmedi
 
 **Objetivo.** Testar o adapter WinUI real, não apenas seus mapas puros.
 
-**Entregue.** Harness opt-in que cria duas janelas, injeta key-down/up, substitui conteúdo, testa detach e valida `RegisterHotKey`/`WM_HOTKEY`/unregister. O handler acompanha o conteúdo exato, monitora substituição e fecha a corrida Attach/Dispose.
+**Entregue.** Harness opt-in que cria duas janelas, injeta key-down/up, substitui conteúdo, testa detach e valida `RegisterHotKey`/`WM_HOTKEY`/unregister. O handler acompanha o conteúdo exato, monitora substituição, fecha a corrida Attach/Dispose e interrompe o timer de retry enquanto o conteúdo está estável.
 
 - [x] Harness no sample sem entrar no pacote;
 - [x] Execução local interativa com todos os cenários aprovados;
@@ -211,6 +212,7 @@ Foram entregues prefixos compartilhados, `SequenceOverlapPolicy` (`ExecuteImmedi
 - [x] Prefixos iniciais compartilhados;
 - [x] `ExecuteImmediately`, `PreferLongest` e `RejectAmbiguous`;
 - [x] Divergência e timeout da sequência longa;
+- [x] Timer one-shot descartado imediatamente após timeout/callback;
 - [x] `CancelPendingSequences()`;
 - [x] `GetProgressSnapshot()` imutável;
 - [x] `ProgressChanged` fora do lock;
@@ -277,6 +279,7 @@ Toda alteração ligada a um item deve atualizar este arquivo no mesmo PR:
 
 | Data | Itens | Alteração | Evidência |
 |---|---|---|---|
+| 2026-08-24 | 2, 7, 12, 14 | Primeira validação remota diagnosticada; corrigidos instrumentação Android multiline, restore Docfx multi-TFM, bootstrap autocontido/associação tardia da janela WinUI e descarte/parada de timers apontados na revisão | Regressão do timer reproduzida antes da correção; 248 testes; build Windows autocontido; Docfx 0 warnings; actionlint 1.7.12 |
 | 2026-08-24 | 2, 7, 14 | PR de conclusão aberto; checks de runtime/plataforma/documentação iniciados | [PR #8](https://github.com/afernandes/GlobalKeyboardCapture.Maui/pull/8) |
 | 2026-08-24 | 1, 6-15 | Matriz final e implementação de layout Apple, runtime Windows, device farm, API compatibility, supply chain, routing, sequências, métricas, Docfx e decisão de expansão | 248 testes; quatro builds; pacote 2.0.0 inspecionado; Docfx/actionlint; APK UI Automator; benchmark policy |
 | 2026-08-24 | 14 | GitHub Pages habilitado em modo Actions e ambiente `release` criado | API do repositório |

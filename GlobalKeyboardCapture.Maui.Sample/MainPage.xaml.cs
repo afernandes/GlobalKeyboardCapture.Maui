@@ -64,8 +64,7 @@ public partial class MainPage : ContentPage
         CaptureScopeSwitch.IsToggled = true;
         UpdatePipelineStatus();
 #if WINDOWS
-        if (Window is not null)
-            WindowsRuntimeIntegration.TryStart(Window, _keyHandlerService, _globalHotkeyService);
+        WindowsRuntimeIntegration.TryStart(this, _keyHandlerService, _globalHotkeyService);
 #endif
 #if ANDROID
         Android.Util.Log.Info(

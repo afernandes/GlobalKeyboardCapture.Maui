@@ -12,6 +12,15 @@ internal sealed class FakeTimeProvider : TimeProvider
 
     public override long TimestampFrequency => Stopwatch.Frequency;
 
+    public int ActiveTimerCount
+    {
+        get
+        {
+            lock (_lockObject)
+                return _timers.Count;
+        }
+    }
+
     public override ITimer CreateTimer(
         TimerCallback callback,
         object? state,

@@ -138,10 +138,7 @@ jobs:
             adb install -r "$(find GlobalKeyboardCapture.Maui.Sample/bin/Release/net10.0-android -name '*-Signed.apk' -print -quit)"
             adb install -r eng/android-device-tests/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
             adb logcat -c
-            adb shell am instrument -w -r \
-              -e class io.github.afernandes.globalkeyboardcapture.devicetests.KeyboardCaptureDeviceTest \
-              com.companyname.globalkeyboardcapturemauisample.test/androidx.test.runner.AndroidJUnitRunner \
-              | tee android-device-test.txt
+            adb shell am instrument -w -r -e class io.github.afernandes.globalkeyboardcapture.devicetests.KeyboardCaptureDeviceTest com.companyname.globalkeyboardcapturemauisample.test/androidx.test.runner.AndroidJUnitRunner | tee android-device-test.txt
             grep -F 'OK (1 test)' android-device-test.txt
             adb shell monkey -p com.companyname.globalkeyboardcapturemauisample 1
             timeout 60 sh -c 'until adb logcat -d -s GKC.Integration:I "*:S" | grep -F "Ready;Views=1"; do sleep 1; done'
@@ -180,7 +177,7 @@ jobs:
         run: dotnet workload install maui-windows --ignore-failed-sources
 
       - name: Build unpackaged sample
-        run: dotnet build GlobalKeyboardCapture.Maui.Sample/GlobalKeyboardCapture.Maui.Sample.csproj -c Release -f net10.0-windows10.0.19041.0 -p:TargetFrameworks=net10.0-windows10.0.19041.0 -p:WindowsPackageType=None -p:WindowsAppSDKSelfContained=false
+        run: dotnet build GlobalKeyboardCapture.Maui.Sample/GlobalKeyboardCapture.Maui.Sample.csproj -c Release -f net10.0-windows10.0.19041.0 -p:TargetFrameworks=net10.0-windows10.0.19041.0 -p:WindowsRuntimeIntegrationBuild=true
 
       - name: Exercise WinUI keyboard and global-hotkey runtime
         shell: pwsh
@@ -191,12 +188,17 @@ jobs:
           $process = Start-Process -FilePath $executable -PassThru
           if (-not $process.WaitForExit(120000)) {
             $process.Kill($true)
+            if (Test-Path $env:GKC_WINDOWS_INTEGRATION_OUTPUT) {
+              Get-Content $env:GKC_WINDOWS_INTEGRATION_OUTPUT
+            }
             throw 'Windows integration app timed out.'
+          }
+          if (Test-Path $env:GKC_WINDOWS_INTEGRATION_OUTPUT) {
+            Get-Content $env:GKC_WINDOWS_INTEGRATION_OUTPUT
           }
           if ($process.ExitCode -ne 0) {
             throw "Windows integration app exited with code $($process.ExitCode)."
           }
-          Get-Content $env:GKC_WINDOWS_INTEGRATION_OUTPUT
           Select-String -Path $env:GKC_WINDOWS_INTEGRATION_OUTPUT -Pattern '^PASS KeyDownKeyUp$' -Quiet | ForEach-Object { if (-not $_) { throw 'KeyDown/KeyUp evidence missing.' } }
           Select-String -Path $env:GKC_WINDOWS_INTEGRATION_OUTPUT -Pattern '^PASS TwoWindows$' -Quiet | ForEach-Object { if (-not $_) { throw 'Two-window evidence missing.' } }
           Select-String -Path $env:GKC_WINDOWS_INTEGRATION_OUTPUT -Pattern '^PASS ContentReplacement$' -Quiet | ForEach-Object { if (-not $_) { throw 'Content replacement evidence missing.' } }

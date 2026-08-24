@@ -179,9 +179,11 @@ public sealed class KeySequenceHandlerTests
 
         handler.HandleKey(Key("A"));
         handler.HandleKey(Key("B"));
+        time.ActiveTimerCount.Should().Be(1);
         time.Advance(TimeSpan.FromMilliseconds(101));
 
         invocations.Should().Be(1);
+        time.ActiveTimerCount.Should().Be(0);
         handler.GetProgressSnapshot().Should().OnlyContain(progress =>
             progress.MatchedGestureCount == 0 && !progress.IsCompletionPending);
     }

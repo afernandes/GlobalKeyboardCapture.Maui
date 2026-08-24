@@ -30,6 +30,12 @@
 		<RuntimeIdentifiers Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'maccatalyst' and $([MSBuild]::IsOSPlatform('windows'))">maccatalyst-x64</RuntimeIdentifiers>
     </PropertyGroup>
 
+	<PropertyGroup Condition="'$(WindowsRuntimeIntegrationBuild)' == 'true' and $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+		<WindowsPackageType>None</WindowsPackageType>
+		<WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+	</PropertyGroup>
+
 	<ItemGroup>
 		<!-- App Icon -->
 		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />

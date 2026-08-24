@@ -383,6 +383,7 @@ public sealed class KeySequenceHandler : IKeyHandler, IDisposable
     private void CompletePendingAfterTimeout(SequenceRegistration registration)
     {
         Action? action = null;
+        ITimer? elapsedTimer = null;
         var changed = false;
         lock (_lockObject)
         {
@@ -395,6 +396,7 @@ public sealed class KeySequenceHandler : IKeyHandler, IDisposable
             }
 
             current.IsCompletionPending = false;
+            elapsedTimer = current.PendingTimer;
             current.PendingTimer = null;
             action = current.Action;
             changed = true;
@@ -408,6 +410,7 @@ public sealed class KeySequenceHandler : IKeyHandler, IDisposable
             }
         }
 
+        elapsedTimer?.Dispose();
         if (changed)
             RaiseProgressChanged();
         MainThread.BeginInvokeOnMainThread(() => InvokeSafely(action));

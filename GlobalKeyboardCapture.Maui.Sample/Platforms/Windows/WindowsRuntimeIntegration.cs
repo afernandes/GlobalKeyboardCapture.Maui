@@ -28,7 +28,7 @@ internal static class WindowsRuntimeIntegration
     private static nint _focusedWindowHandle;
 
     public static void TryStart(
-        Microsoft.Maui.Controls.Window firstWindow,
+        Page page,
         IKeyHandlerService service,
         IGlobalHotkeyService globalHotkeys)
     {
@@ -41,26 +41,33 @@ internal static class WindowsRuntimeIntegration
             return;
         }
 
-        _ = RunAsync(firstWindow, service, globalHotkeys);
+        var outputPath = Environment.GetEnvironmentVariable("GKC_WINDOWS_INTEGRATION_OUTPUT")
+            ?? Path.Combine(Path.GetTempPath(), "gkc-windows-integration.log");
+        File.WriteAllText(outputPath, $"INFO HarnessScheduled{Environment.NewLine}");
+        _ = RunAsync(page, service, globalHotkeys, outputPath);
     }
 
     private static async Task RunAsync(
-        Microsoft.Maui.Controls.Window firstWindow,
+        Page page,
         IKeyHandlerService service,
-        IGlobalHotkeyService globalHotkeys)
+        IGlobalHotkeyService globalHotkeys,
+        string outputPath)
     {
-        var outputPath = Environment.GetEnvironmentVariable("GKC_WINDOWS_INTEGRATION_OUTPUT")
-            ?? Path.Combine(Path.GetTempPath(), "gkc-windows-integration.log");
-        var evidence = new List<string>();
+        var evidence = new List<string> { "INFO HarnessScheduled" };
         var exitCode = 0;
 
         try
         {
+            Microsoft.Maui.Controls.Window? firstWindow = null;
+            await WaitUntilAsync(
+                () => (firstWindow = page.Window) is not null,
+                "MAUI window assignment");
+
             var recorder = new RuntimeRecordingHandler();
             using var recorderRegistration = service.RegisterHandler(recorder, priority: int.MaxValue);
             await WaitUntilAsync(() => service.PlatformViewCount == 1, "initial window attachment");
 
-            var firstNativeWindow = await WaitForNativeWindowAsync(firstWindow);
+            var firstNativeWindow = await WaitForNativeWindowAsync(firstWindow!);
             await ReplaceContentAndFocusAsync(firstNativeWindow, "First integration window");
             await SendAndExpectAsync(recorder, KeyboardKey.F8, VK_F8);
             evidence.Add("PASS KeyDownKeyUp");
