@@ -144,6 +144,7 @@ jobs:
             adb install -r eng/android-device-tests/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
             adb logcat -c
             adb shell am instrument -w -r -e class io.github.afernandes.globalkeyboardcapture.devicetests.KeyboardCaptureDeviceTest com.companyname.globalkeyboardcapturemauisample.test/androidx.test.runner.AndroidJUnitRunner | tee android-device-test.txt
+            adb logcat -d -v brief > android-keyboard.log
             grep -F 'OK (1 test)' android-device-test.txt
             adb shell monkey -p com.companyname.globalkeyboardcapturemauisample 1
             timeout 60 sh -c 'until adb logcat -d -s GKC.Integration:I "*:S" | grep -F "Ready;Views=1"; do sleep 1; done'

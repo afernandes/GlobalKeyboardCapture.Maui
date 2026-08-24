@@ -88,12 +88,16 @@ public final class KeyboardCaptureDeviceTest {
     }
 
     private static void scrollAndWaitForText(UiDevice device, String text) {
-        if (device.hasObject(By.text(text)))
+        UiObject2 renderedText = device.findObject(By.text(text));
+        if (renderedText != null)
             return;
 
         UiObject2 scrollable = device.findObject(By.scrollable(true));
-        if (scrollable != null)
-            scrollable.scroll(Direction.DOWN, 1.0f);
-        waitForText(device, text);
+        assertNotNull("No scrollable view was rendered.", scrollable);
+
+        renderedText = scrollable.scrollUntil(
+            Direction.DOWN,
+            Until.findObject(By.text(text)));
+        assertNotNull("Text was not rendered while scrolling: " + text, renderedText);
     }
 }
