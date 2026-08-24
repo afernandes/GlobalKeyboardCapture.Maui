@@ -1,6 +1,6 @@
 # Roadmap — GlobalKeyboardCapture.Maui
 
-> Última atualização: **24 de agosto de 2026**. O [PR #7](https://github.com/afernandes/GlobalKeyboardCapture.Maui/pull/7) foi mergeado em `main`. O lote atual está na branch `codex/complete-roadmap`; o link do novo PR será registrado após a abertura.
+> Última atualização: **24 de agosto de 2026**. O [PR #7](https://github.com/afernandes/GlobalKeyboardCapture.Maui/pull/7) foi mergeado em `main`. O lote atual está na branch `codex/complete-roadmap` e no [PR #8](https://github.com/afernandes/GlobalKeyboardCapture.Maui/pull/8).
 
 Este arquivo é o painel de execução da linha 2.x. Os números são estáveis e devem ser citados em issues, commits e pull requests. Um item só muda para ✅ quando o critério de aceite possui evidência; implementação pronta que depende de hardware, credenciais ou publicação permanece explícita.
 
@@ -40,7 +40,7 @@ Foram entregues prefixos compartilhados, `SequenceOverlapPolicy` (`ExecuteImmedi
 | # | Pri. | Estado | Item | Engenharia entregue | Pendência objetiva |
 |---:|:---:|:---:|---|---|---|
 | 1 | P0 | ✅ | Matriz local completa | 248 testes; quatro builds; trim/AOT; format; auditoria; pacote inspecionado | Manter como gate de release |
-| 2 | P0 | 🚧 | Checks do PR | CI ampliado para plataforma, runtime e pacote | Abrir o PR atual e confirmar todos os checks |
+| 2 | P0 | 🚧 | Checks do PR | PR #8 aberto; CI ampliado para plataforma, runtime e pacote | Confirmar todos os checks e reviews |
 | 3 | P0 | 🧪 | Android em hardware real | Emulador e UI Automator automatizados | Teclados USB/Bluetooth e scanner físico |
 | 4 | P0 | 🧪 | Apple em hardware real | Adapter, lifecycle e builds Apple prontos | iPad e Mac com teclado externo |
 | 5 | P0 | ⏳ | Publicar 2.0.0 | Workflow de release e artefatos definidos | Depende de 2, 3, 4, 8 e 10 |
@@ -78,10 +78,10 @@ Foram entregues prefixos compartilhados, `SequenceOverlapPolicy` (`ExecuteImmedi
 
 **Entregue.** Testes Windows/Linux, builds das quatro plataformas, integração Android, runtime WinUI e pack com API compatibility estão definidos no CI. O PR #7 anterior terminou com oito checks verdes e foi mergeado.
 
-**Critério de aceite.** O novo PR da branch `codex/complete-roadmap` deve ficar integralmente verde e sem comentário de revisão pendente.
+**Critério de aceite.** O [PR #8](https://github.com/afernandes/GlobalKeyboardCapture.Maui/pull/8) deve ficar integralmente verde e sem comentário de revisão pendente.
 
 - [x] Workflow implementado e validado por `actionlint`;
-- [ ] Abrir o novo PR;
+- [x] Abrir o PR #8;
 - [ ] Confirmar todos os checks;
 - [ ] Tratar comentários/reviews e registrar o link aqui.
 
@@ -277,6 +277,7 @@ Toda alteração ligada a um item deve atualizar este arquivo no mesmo PR:
 
 | Data | Itens | Alteração | Evidência |
 |---|---|---|---|
+| 2026-08-24 | 2, 7, 14 | PR de conclusão aberto; checks de runtime/plataforma/documentação iniciados | [PR #8](https://github.com/afernandes/GlobalKeyboardCapture.Maui/pull/8) |
 | 2026-08-24 | 1, 6-15 | Matriz final e implementação de layout Apple, runtime Windows, device farm, API compatibility, supply chain, routing, sequências, métricas, Docfx e decisão de expansão | 248 testes; quatro builds; pacote 2.0.0 inspecionado; Docfx/actionlint; APK UI Automator; benchmark policy |
 | 2026-08-24 | 14 | GitHub Pages habilitado em modo Actions e ambiente `release` criado | API do repositório |
 | 2026-08-24 | 1-15 | Painel reescrito para separar engenharia concluída de dependências externas; item 12 marcado como concluído | Auditoria desta branch |
