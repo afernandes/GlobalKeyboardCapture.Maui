@@ -106,11 +106,24 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Create ephemeral Android signing key
+        run: keytool -genkeypair -noprompt -keystore "$RUNNER_TEMP/gkc-integration.keystore" -storepass android -alias androiddebugkey -keypass android -dname "CN=GlobalKeyboardCapture CI,O=Android,C=US" -keyalg RSA -keysize 2048 -validity 10000
+
       - name: Install Android workload
         run: dotnet workload install maui-android --ignore-failed-sources
 
       - name: Build Android sample APK
-        run: dotnet build GlobalKeyboardCapture.Maui.Sample/GlobalKeyboardCapture.Maui.Sample.csproj -c Release -f net10.0-android -r android-x64 -p:TargetFrameworks=net10.0-android -p:AndroidPackageFormat=apk -p:RunAOTCompilation=false
+        run: dotnet build GlobalKeyboardCapture.Maui.Sample/GlobalKeyboardCapture.Maui.Sample.csproj -c Release -f net10.0-android -r android-x64 -p:TargetFrameworks=net10.0-android -p:AndroidPackageFormat=apk -p:RunAOTCompilation=false -p:AndroidKeyStore=true -p:AndroidSigningKeyStore="$RUNNER_TEMP/gkc-integration.keystore" -p:AndroidSigningStorePass=android -p:AndroidSigningKeyAlias=androiddebugkey -p:AndroidSigningKeyPass=android
+
+      - name: Build Android UI Automator test APK
+        run: gradle -p eng/android-device-tests :app:assembleDebugAndroidTest --no-daemon
+        env:
+          GKC_ANDROID_KEYSTORE: ${{ runner.temp }}/gkc-integration.keystore
 
       - name: Enable KVM acceleration
         run: |
@@ -128,7 +141,11 @@ jobs:
           enable-hw-keyboard: true
           script: |
             adb install -r "$(find GlobalKeyboardCapture.Maui.Sample/bin/Release/net10.0-android -name '*-Signed.apk' -print -quit)"
+            adb install -r eng/android-device-tests/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
             adb logcat -c
+            adb shell am instrument -w -r -e class io.github.afernandes.globalkeyboardcapture.devicetests.KeyboardCaptureDeviceTest com.companyname.globalkeyboardcapturemauisample.test/androidx.test.runner.AndroidJUnitRunner | tee android-device-test.txt
+            adb logcat -d -v brief > android-keyboard.log
+            grep -F 'OK (1 test)' android-device-test.txt
             adb shell monkey -p com.companyname.globalkeyboardcapturemauisample 1
             timeout 60 sh -c 'until adb logcat -d -s GKC.Integration:I "*:S" | grep -F "Ready;Views=1"; do sleep 1; done'
             timeout 30 sh -c 'until adb logcat -d -s GKC.Integration:I "*:S" | grep -F "Focused"; do sleep 1; done'
@@ -146,12 +163,66 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: android-keyboard-log
-          path: android-keyboard.log
+          path: |
+            android-keyboard.log
+            android-device-test.txt
+
+  windows-integration:
+    name: Windows runtime integration
+    runs-on: windows-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install Windows workload
+        run: dotnet workload install maui-windows --ignore-failed-sources
+
+      - name: Build unpackaged sample
+        run: dotnet build GlobalKeyboardCapture.Maui.Sample/GlobalKeyboardCapture.Maui.Sample.csproj -c Release -f net10.0-windows10.0.19041.0 -p:TargetFrameworks=net10.0-windows10.0.19041.0 -p:WindowsRuntimeIntegrationBuild=true
+
+      - name: Exercise WinUI keyboard and global-hotkey runtime
+        shell: pwsh
+        run: |
+          $env:GKC_WINDOWS_INTEGRATION = '1'
+          $env:GKC_WINDOWS_INTEGRATION_OUTPUT = Join-Path $env:RUNNER_TEMP 'windows-keyboard-integration.log'
+          $executable = Get-ChildItem GlobalKeyboardCapture.Maui.Sample/bin/Release/net10.0-windows10.0.19041.0/win-x64 -Filter GlobalKeyboardCapture.Maui.Sample.exe -Recurse | Select-Object -First 1 -ExpandProperty FullName
+          $process = Start-Process -FilePath $executable -PassThru
+          if (-not $process.WaitForExit(120000)) {
+            $process.Kill($true)
+            if (Test-Path $env:GKC_WINDOWS_INTEGRATION_OUTPUT) {
+              Get-Content $env:GKC_WINDOWS_INTEGRATION_OUTPUT
+            }
+            throw 'Windows integration app timed out.'
+          }
+          if (Test-Path $env:GKC_WINDOWS_INTEGRATION_OUTPUT) {
+            Get-Content $env:GKC_WINDOWS_INTEGRATION_OUTPUT
+          }
+          if ($process.ExitCode -ne 0) {
+            throw "Windows integration app exited with code $($process.ExitCode)."
+          }
+          Select-String -Path $env:GKC_WINDOWS_INTEGRATION_OUTPUT -Pattern '^PASS KeyDownKeyUp$' -Quiet | ForEach-Object { if (-not $_) { throw 'KeyDown/KeyUp evidence missing.' } }
+          Select-String -Path $env:GKC_WINDOWS_INTEGRATION_OUTPUT -Pattern '^PASS TwoWindows$' -Quiet | ForEach-Object { if (-not $_) { throw 'Two-window evidence missing.' } }
+          Select-String -Path $env:GKC_WINDOWS_INTEGRATION_OUTPUT -Pattern '^PASS ContentReplacement$' -Quiet | ForEach-Object { if (-not $_) { throw 'Content replacement evidence missing.' } }
+          Select-String -Path $env:GKC_WINDOWS_INTEGRATION_OUTPUT -Pattern '^PASS AttachDetach$' -Quiet | ForEach-Object { if (-not $_) { throw 'Attach/detach evidence missing.' } }
+          Select-String -Path $env:GKC_WINDOWS_INTEGRATION_OUTPUT -Pattern '^PASS RegisterHotKeyUnregisterHotKeyWmHotkey$' -Quiet | ForEach-Object { if (-not $_) { throw 'Global hotkey evidence missing.' } }
+          Select-String -Path $env:GKC_WINDOWS_INTEGRATION_OUTPUT -Pattern '^RESULT PASS$' -Quiet | ForEach-Object { if (-not $_) { throw 'Windows integration did not pass.' } }
+
+      - name: Upload Windows integration log
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: windows-keyboard-log
+          path: ${{ runner.temp }}/windows-keyboard-integration.log
 
   pack:
     name: Pack NuGet
     runs-on: windows-latest
-    needs: [test, build-platform, android-integration]
+    needs: [test, build-platform, android-integration, windows-integration]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -163,7 +234,28 @@ jobs:
       - name: Install MAUI workloads
         run: dotnet workload install maui --ignore-failed-sources
 
-      - name: Pack library
+      - name: Detect published API baseline
+        id: api-baseline
+        shell: pwsh
+        run: |
+          $baseline = dotnet msbuild GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -nologo -getProperty:PublicApiBaselineVersion
+          $uri = "https://api.nuget.org/v3-flatcontainer/globalkeyboardcapture.maui/$baseline/globalkeyboardcapture.maui.$baseline.nupkg"
+          try {
+            Invoke-WebRequest -Uri $uri -Method Head -UseBasicParsing | Out-Null
+            "available=true" >> $env:GITHUB_OUTPUT
+            "version=$baseline" >> $env:GITHUB_OUTPUT
+          }
+          catch {
+            "available=false" >> $env:GITHUB_OUTPUT
+            "Package baseline $baseline is not published yet; structural package validation remains enabled."
+          }
+
+      - name: Pack library with published API baseline
+        if: steps.api-baseline.outputs.available == 'true'
+        run: dotnet pack GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -c Release -p:UsePublishedApiBaseline=true
+
+      - name: Pack library before initial 2.x baseline
+        if: steps.api-baseline.outputs.available != 'true'
         run: dotnet pack GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -c Release
 
       - name: Upload NuGet package

@@ -5,6 +5,19 @@
 public class KeyHandlerOptions
 {
     /// <summary>
+    /// Gets or sets how built-in <see cref="Handlers.KeySequenceHandler"/> instances
+    /// resolve a complete sequence that is also a prefix of a longer sequence.
+    /// </summary>
+    public Core.Models.SequenceOverlapPolicy SequenceOverlapPolicy { get; set; } =
+        Core.Models.SequenceOverlapPolicy.ExecuteImmediately;
+
+    /// <summary>
+    /// Gets or sets an optional physical-key translator backed by the active operating-system
+    /// keyboard layout. Apple uses this before its US-style HID fallback for printable keys.
+    /// </summary>
+    public Core.Interfaces.IKeyboardLayoutTranslator? KeyboardLayoutTranslator { get; set; }
+
+    /// <summary>
     /// Gets explicitly configured keyboard-wedge scanner profiles. When empty, the
     /// legacy barcode timeout and length properties define a compatible default profile.
     /// </summary>
@@ -56,4 +69,11 @@ public class KeyHandlerOptions
     /// so the input hot path performs no diagnostic string formatting.
     /// </summary>
     public bool EnableDiagnostics { get; set; }
+
+    /// <summary>
+    /// Enables low-cardinality <see cref="System.Diagnostics.Metrics"/> counters and
+    /// handler-duration measurements. Disabled by default so the input hot path does
+    /// not initialize instruments, read a clock, or emit measurements.
+    /// </summary>
+    public bool EnableMetrics { get; set; }
 }

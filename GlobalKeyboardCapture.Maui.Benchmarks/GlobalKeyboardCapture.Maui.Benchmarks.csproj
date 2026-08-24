@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Models\*.cs" Link="Linked\Models\%(Filename)%(Extension)" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Interfaces\*.cs" Link="Linked\Interfaces\%(Filename)%(Extension)" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Configuration\BarcodeScannerProfile.cs" Link="Linked\Configuration\BarcodeScannerProfile.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Configuration\KeyHandlerOptions.cs" Link="Linked\Configuration\KeyHandlerOptions.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Services\KeyHandlerService.cs" Link="Linked\Services\KeyHandlerService.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Core\Services\KeyboardMetrics.cs" Link="Linked\Services\KeyboardMetrics.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Handlers\BarcodeHandler.cs" Link="Linked\Handlers\BarcodeHandler.cs" />
+    <Compile Include="..\GlobalKeyboardCapture.Maui\Handlers\HotkeyHandler.cs" Link="Linked\Handlers\HotkeyHandler.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Microsoft.Maui.ApplicationModel" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.11" />
+  </ItemGroup>
+
+</Project>

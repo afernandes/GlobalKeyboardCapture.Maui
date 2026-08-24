@@ -22,7 +22,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IKeyHandlerService, KeyHandlerService>();
         services.AddTransient<BarcodeHandler>();
         services.AddTransient<HotkeyHandler>();
-        services.AddTransient<KeySequenceHandler>();
+        services.AddTransient(provider => new KeySequenceHandler(
+            provider.GetRequiredService<KeyHandlerOptions>().SequenceOverlapPolicy));
 
 #if WINDOWS
         services.AddSingleton<IPlatformKeyHandler, WindowsKeyHandler>();

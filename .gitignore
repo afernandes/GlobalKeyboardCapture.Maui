@@ -43,6 +43,12 @@ dlldata.c
 # DNX
 project.lock.json
 artifacts/
+BenchmarkDotNet.Artifacts/
+eng/android-device-tests/.gradle/
+eng/android-device-tests/build/
+eng/android-device-tests/app/build/
+docs/api/
+docs/_site/
 
 *_i.c
 *_p.c

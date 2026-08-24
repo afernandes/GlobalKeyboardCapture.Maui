@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Suppressions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+              xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <!--
+    Keep this file empty unless an intentional compatibility difference has been
+    reviewed as a breaking change. Never suppress package-validation diagnostics
+    globally; record each accepted diagnostic with its exact target and operands.
+  -->
+</Suppressions>

@@ -1,0 +1,14 @@
+<Project>
+  <PropertyGroup>
+    <!-- Update this to the latest stable 2.x package after every compatible release. -->
+    <PublicApiBaselineVersion>2.0.0</PublicApiBaselineVersion>
+    <EnablePackageValidation>true</EnablePackageValidation>
+    <EnableStrictModeForCompatibleFrameworksInPackage>true</EnableStrictModeForCompatibleFrameworksInPackage>
+    <EnableStrictModeForBaselineValidation>true</EnableStrictModeForBaselineValidation>
+    <PackageValidationBaselineVersion Condition="'$(UsePublishedApiBaseline)' == 'true'">$(PublicApiBaselineVersion)</PackageValidationBaselineVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ApiCompatSuppressionFile Include="$(MSBuildThisFileDirectory)CompatibilitySuppressions.xml" />
+  </ItemGroup>
+</Project>

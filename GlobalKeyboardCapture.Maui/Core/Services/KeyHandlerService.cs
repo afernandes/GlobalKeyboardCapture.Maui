@@ -163,6 +163,10 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
     {
         ArgumentNullException.ThrowIfNull(key);
 
+        var metricsEnabled = _options.EnableMetrics;
+        if (metricsEnabled)
+            KeyboardMetricsRecorder.RecordEventReceived(key.IsRepeat);
+
         HandlerRegistration[] currentHandlers;
         var isSuspended = false;
         lock (_lockObject)
@@ -177,6 +181,8 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
 
         if (isSuspended)
         {
+            if (metricsEnabled)
+                KeyboardMetricsRecorder.RecordEventIgnored();
             if (_options.EnableDiagnostics)
             {
                 ReportDiagnostic(KeyboardDiagnosticEventArgs.FromKeyEvent(
@@ -189,12 +195,16 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
 
         if (key.EventType == KeyboardEventType.KeyUp && !_options.CaptureKeyUp)
         {
+            if (metricsEnabled)
+                KeyboardMetricsRecorder.RecordEventIgnored();
             ReportIgnoredEvent(key, "Key-up events are disabled.");
             return;
         }
 
         if (key.IsRepeat && !_options.AllowKeyRepeat)
         {
+            if (metricsEnabled)
+                KeyboardMetricsRecorder.RecordEventIgnored();
             ReportIgnoredEvent(key, "Auto-repeat events are disabled.");
             return;
         }
@@ -202,17 +212,28 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         if (_options.EnableDiagnostics)
             ReportDiagnostic(KeyboardDiagnosticEventArgs.FromKeyEvent(key));
 
+        if (metricsEnabled)
+            KeyboardMetricsRecorder.RecordEventDispatched();
+
         var stopOnHandled = _options.StopOnHandled;
         foreach (var registration in currentHandlers)
         {
             if (registration.Scope is { IsEnabled: false })
                 continue;
+            if (registration.Scope?.DeviceFilter is { } scopeFilter && !scopeFilter.Matches(key))
+                continue;
+            if (registration.DeviceFilter is { } deviceFilter && !deviceFilter.Matches(key))
+                continue;
 
             var handler = registration.Handler;
+            var measureDuration = false;
+            var startedTimestamp = 0L;
             try
             {
                 if (handler.ShouldHandle(key))
                 {
+                    if (metricsEnabled)
+                        KeyboardMetricsRecorder.RecordHandlerInvocation();
                     if (handler is IAsyncKeyHandler asyncHandler)
                     {
                         var snapshot = key.CreateSnapshot();
@@ -223,13 +244,25 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
                     }
                     else
                     {
+                        if (metricsEnabled)
+                        {
+                            startedTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
+                            measureDuration = true;
+                        }
                         handler.HandleKey(key);
                     }
                 }
             }
             catch (Exception ex)
             {
+                if (metricsEnabled)
+                    KeyboardMetricsRecorder.RecordHandlerError();
                 _logger.LogError(ex, "Handler failed to process key event");
+            }
+            finally
+            {
+                if (measureDuration)
+                    KeyboardMetricsRecorder.RecordHandlerDuration(startedTimestamp);
             }
 
             if (stopOnHandled && key.Handled) break;
@@ -238,9 +271,23 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
 
     /// <inheritdoc/>
     public IDisposable RegisterHandler(IKeyHandler handler, int priority = 0)
-        => RegisterHandler(handler, priority, scope: null);
+        => RegisterHandler(handler, priority, scope: null, deviceFilter: null);
 
-    private IDisposable RegisterHandler(IKeyHandler handler, int priority, CaptureScope? scope)
+    /// <inheritdoc/>
+    public IDisposable RegisterHandler(
+        IKeyHandler handler,
+        KeyboardDeviceFilter deviceFilter,
+        int priority = 0)
+    {
+        ArgumentNullException.ThrowIfNull(deviceFilter);
+        return RegisterHandler(handler, priority, scope: null, deviceFilter);
+    }
+
+    private IDisposable RegisterHandler(
+        IKeyHandler handler,
+        int priority,
+        CaptureScope? scope,
+        KeyboardDeviceFilter? deviceFilter)
     {
         ArgumentNullException.ThrowIfNull(handler);
 
@@ -249,11 +296,18 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
             ThrowIfDisposed();
 
             var existing = _handlers.Find(registration =>
-                ReferenceEquals(registration.Handler, handler) && ReferenceEquals(registration.Scope, scope));
+                ReferenceEquals(registration.Handler, handler)
+                && ReferenceEquals(registration.Scope, scope)
+                && Equals(registration.DeviceFilter, deviceFilter));
             if (existing is not null)
                 return new HandlerRegistrationToken(this, existing.Id);
 
-            var registration = new HandlerRegistration(++_nextRegistrationId, handler, priority, scope);
+            var registration = new HandlerRegistration(
+                ++_nextRegistrationId,
+                handler,
+                priority,
+                scope,
+                deviceFilter);
             var insertionIndex = _handlers.FindIndex(item => item.Priority < priority);
             if (insertionIndex < 0)
                 _handlers.Add(registration);
@@ -280,6 +334,10 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         KeyEventArgs snapshot,
         CancellationToken cancellationToken)
     {
+        var metricsEnabled = _options.EnableMetrics;
+        var startedTimestamp = metricsEnabled
+            ? System.Diagnostics.Stopwatch.GetTimestamp()
+            : 0L;
         try
         {
             await handler.HandleKeyAsync(snapshot, cancellationToken).ConfigureAwait(false);
@@ -290,7 +348,14 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         }
         catch (Exception exception)
         {
+            if (metricsEnabled)
+                KeyboardMetricsRecorder.RecordHandlerError();
             _logger.LogError(exception, "Asynchronous handler failed to process key event");
+        }
+        finally
+        {
+            if (metricsEnabled)
+                KeyboardMetricsRecorder.RecordHandlerDuration(startedTimestamp);
         }
     }
 
@@ -439,11 +504,27 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
 
     /// <inheritdoc/>
     public IKeyboardCaptureScope CreateScope(string? name = null, bool isEnabled = true)
+        => CreateScopeCore(name, isEnabled, deviceFilter: null);
+
+    /// <inheritdoc/>
+    public IKeyboardCaptureScope CreateScope(
+        KeyboardDeviceFilter deviceFilter,
+        string? name = null,
+        bool isEnabled = true)
+    {
+        ArgumentNullException.ThrowIfNull(deviceFilter);
+        return CreateScopeCore(name, isEnabled, deviceFilter);
+    }
+
+    private IKeyboardCaptureScope CreateScopeCore(
+        string? name,
+        bool isEnabled,
+        KeyboardDeviceFilter? deviceFilter)
     {
         lock (_lockObject)
         {
             ThrowIfDisposed();
-            return new CaptureScope(this, name, isEnabled);
+            return new CaptureScope(this, name, isEnabled, deviceFilter);
         }
     }
 
@@ -541,7 +622,12 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
 
     #endregion
 
-    private sealed record HandlerRegistration(long Id, IKeyHandler Handler, int Priority, CaptureScope? Scope);
+    private sealed record HandlerRegistration(
+        long Id,
+        IKeyHandler Handler,
+        int Priority,
+        CaptureScope? Scope,
+        KeyboardDeviceFilter? DeviceFilter);
 
     private sealed class PlatformViewRegistration(
         long id,
@@ -616,14 +702,21 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         private int _isEnabled;
         private bool _isDisposed;
 
-        public CaptureScope(KeyHandlerService owner, string? name, bool isEnabled)
+        public CaptureScope(
+            KeyHandlerService owner,
+            string? name,
+            bool isEnabled,
+            KeyboardDeviceFilter? deviceFilter)
         {
             _owner = owner;
             Name = name;
+            DeviceFilter = deviceFilter;
             _isEnabled = isEnabled ? 1 : 0;
         }
 
         public string? Name { get; }
+
+        public KeyboardDeviceFilter? DeviceFilter { get; }
 
         public bool IsEnabled
         {
@@ -639,11 +732,26 @@ public sealed class KeyHandlerService : IKeyHandlerService, IDisposable
         }
 
         public IDisposable RegisterHandler(IKeyHandler handler, int priority = 0)
+            => RegisterHandlerCore(handler, priority, deviceFilter: null);
+
+        public IDisposable RegisterHandler(
+            IKeyHandler handler,
+            KeyboardDeviceFilter deviceFilter,
+            int priority = 0)
+        {
+            ArgumentNullException.ThrowIfNull(deviceFilter);
+            return RegisterHandlerCore(handler, priority, deviceFilter);
+        }
+
+        private IDisposable RegisterHandlerCore(
+            IKeyHandler handler,
+            int priority,
+            KeyboardDeviceFilter? deviceFilter)
         {
             lock (_scopeLock)
             {
                 ThrowIfDisposed();
-                var registration = _owner.RegisterHandler(handler, priority, this);
+                var registration = _owner.RegisterHandler(handler, priority, this, deviceFilter);
                 _registrations.Add(registration);
                 return registration;
             }

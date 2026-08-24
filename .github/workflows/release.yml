@@ -1,0 +1,199 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+  artifact-metadata: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Validate, attest, and publish
+    runs-on: windows-latest
+    environment: release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Validate tag and main ancestry
+        id: version
+        shell: pwsh
+        run: |
+          $version = dotnet msbuild GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -nologo -getProperty:CurrentVersion
+          $tag = $env:GITHUB_REF_NAME
+          if ($tag -ne "v$version") {
+            throw "Tag $tag does not match CurrentVersion $version."
+          }
+          git fetch origin main --no-tags
+          git merge-base --is-ancestor $env:GITHUB_SHA origin/main
+          if ($LASTEXITCODE -ne 0) {
+            throw "The tagged commit is not contained in origin/main."
+          }
+          "value=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Install MAUI workloads
+        run: dotnet workload install maui --ignore-failed-sources
+
+      - name: Restore and test
+        run: |
+          dotnet restore GlobalKeyboardCapture.Maui.Tests/GlobalKeyboardCapture.Maui.Tests.csproj
+          dotnet test --project GlobalKeyboardCapture.Maui.Tests/GlobalKeyboardCapture.Maui.Tests.csproj -c Release --no-restore
+
+      - name: Detect published API baseline
+        id: api-baseline
+        shell: pwsh
+        run: |
+          $baseline = dotnet msbuild GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -nologo -getProperty:PublicApiBaselineVersion
+          $uri = "https://api.nuget.org/v3-flatcontainer/globalkeyboardcapture.maui/$baseline/globalkeyboardcapture.maui.$baseline.nupkg"
+          try {
+            Invoke-WebRequest -Uri $uri -Method Head -UseBasicParsing | Out-Null
+            "available=true" >> $env:GITHUB_OUTPUT
+          }
+          catch {
+            "available=false" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Pack with published API baseline
+        if: steps.api-baseline.outputs.available == 'true'
+        run: dotnet pack GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -c Release -p:UsePublishedApiBaseline=true
+
+      - name: Pack initial 2.x release
+        if: steps.api-baseline.outputs.available != 'true'
+        run: dotnet pack GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -c Release
+
+      - name: Stage release artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path release -Force | Out-Null
+          Copy-Item GlobalKeyboardCapture.Maui/bin/Release/*.nupkg release/
+          Copy-Item GlobalKeyboardCapture.Maui/bin/Release/*.snupkg release/
+
+      - name: Restore pinned SBOM tool
+        run: dotnet tool restore
+
+      - name: Generate SPDX SBOM
+        shell: pwsh
+        run: |
+          $env:DOTNET_ENVIRONMENT = $null
+          dotnet sbom-tool generate `
+            -b release `
+            -bc . `
+            -pn GlobalKeyboardCapture.Maui `
+            -pv '${{ steps.version.outputs.value }}' `
+            -ps 'Anderson Fernandes do Nascimento' `
+            -nsb 'https://github.com/afernandes/GlobalKeyboardCapture.Maui'
+          Copy-Item `
+            release/_manifest/spdx_2.2/manifest.spdx.json `
+            "release/GlobalKeyboardCapture.Maui.${{ steps.version.outputs.value }}.spdx.json"
+
+      - name: Generate SHA-256 checksums
+        shell: pwsh
+        run: |
+          Get-ChildItem release -File |
+            Where-Object Extension -in '.nupkg', '.snupkg', '.json' |
+            Sort-Object Name |
+            ForEach-Object {
+              $hash = (Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash.ToLowerInvariant()
+              "$hash  $($_.Name)"
+            } | Set-Content release/SHA256SUMS -Encoding utf8NoBOM
+
+      - name: Attest package provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: |
+            release/*.nupkg
+            release/*.snupkg
+
+      - name: Attest package SBOM
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: |
+            release/*.nupkg
+            release/*.snupkg
+          sbom-path: release/GlobalKeyboardCapture.Maui.${{ steps.version.outputs.value }}.spdx.json
+
+      - name: Upload release evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-${{ steps.version.outputs.value }}
+          path: |
+            release/*.nupkg
+            release/*.snupkg
+            release/*.json
+            release/SHA256SUMS
+
+      - name: Create draft GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          gh release create $env:GITHUB_REF_NAME `
+            release/*.nupkg `
+            release/*.snupkg `
+            release/*.json `
+            release/SHA256SUMS `
+            --draft `
+            --verify-tag `
+            --generate-notes `
+            --title "GlobalKeyboardCapture.Maui ${{ steps.version.outputs.value }}"
+
+      - name: Exchange OIDC token for NuGet credential
+        id: nuget-login
+        uses: NuGet/login@ebc737b6fc418a6ca0073cf116ec8dc156d8b81e # v1
+        with:
+          user: AndersonN
+
+      - name: Publish package and symbols to NuGet.org
+        shell: pwsh
+        env:
+          NUGET_API_KEY: ${{ steps.nuget-login.outputs.NUGET_API_KEY }}
+        run: |
+          dotnet nuget push release/GlobalKeyboardCapture.Maui.${{ steps.version.outputs.value }}.nupkg `
+            --source https://api.nuget.org/v3/index.json `
+            --skip-duplicate
+
+      - name: Wait for NuGet indexing and smoke-test restore
+        shell: pwsh
+        run: |
+          $version = '${{ steps.version.outputs.value }}'
+          $packageUri = "https://api.nuget.org/v3-flatcontainer/globalkeyboardcapture.maui/$version/globalkeyboardcapture.maui.$version.nupkg"
+          $available = $false
+          for ($attempt = 1; $attempt -le 20; $attempt++) {
+            try {
+              Invoke-WebRequest -Uri $packageUri -Method Head -UseBasicParsing | Out-Null
+              $available = $true
+              break
+            }
+            catch {
+              Start-Sleep -Seconds 15
+            }
+          }
+          if (-not $available) {
+            throw "NuGet package $version was not indexed within five minutes."
+          }
+          $smokePath = Join-Path $env:RUNNER_TEMP 'gkc-package-smoke'
+          dotnet new maui -n PackageSmoke -o $smokePath --no-restore
+          dotnet add "$smokePath/PackageSmoke.csproj" package GlobalKeyboardCapture.Maui --version $version
+          dotnet restore "$smokePath/PackageSmoke.csproj"
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit ${{ github.ref_name }} --draft=false

@@ -96,7 +96,14 @@
                     <Label Text="F2 — toggle the test button" />
                     <Label Text="Ctrl+S — simulate save" />
                     <Label Text="Esc — cancel" />
-                    <Label Text="Ctrl+K, Ctrl+C — ordered sequence (1.5 s timeout)" />
+                    <Label Text="Ctrl+K, Ctrl+C — short sequence, deferred for a possible longer match" />
+                    <Label Text="Ctrl+K, Ctrl+C, Ctrl+D — longest overlapping sequence" />
+                    <Label
+                        x:Name="SequenceStatusLabel"
+                        Text="No pending sequence." />
+                    <Button
+                        Text="Cancel pending sequence"
+                        Clicked="OnCancelSequenceClicked" />
                     <Label Text="Alt+Shift+X — app-lifetime hotkey while the app is active" />
                     <Label Text="Ctrl+Alt+G — true OS-global hotkey on Windows" />
                     <Button

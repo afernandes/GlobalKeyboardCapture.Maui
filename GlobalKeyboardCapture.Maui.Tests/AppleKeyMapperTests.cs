@@ -38,4 +38,51 @@ public sealed class AppleKeyMapperTests
         mapping.Location.Should().Be(location);
         mapping.Character.Should().BeNull();
     }
+
+    [Theory]
+    [InlineData(0x2F, '´')]
+    [InlineData(0x31, '#')]
+    [InlineData(0x35, '§')]
+    public void LayoutTranslationOverridesPrintableHidFallback(int keyCode, char translated)
+    {
+        var mapping = AppleKeyMapper.Map(
+            keyCode,
+            shift: false,
+            capsLock: false,
+            translated);
+
+        mapping.Key.Should().Be(KeyboardKey.Character);
+        mapping.Character.Should().Be(translated);
+    }
+
+    [Fact]
+    public void LayoutTranslationCannotReplaceNamedKey()
+    {
+        var mapping = AppleKeyMapper.Map(0x3A, shift: false, capsLock: false, translatedCharacter: 'x');
+
+        mapping.Key.Should().Be(KeyboardKey.F1);
+        mapping.Character.Should().BeNull();
+    }
+
+    [Fact]
+    public void InvalidLayoutTranslationFallsBackToHidMap()
+    {
+        var mapping = AppleKeyMapper.Map(0x2F, shift: false, capsLock: false, translatedCharacter: '\n');
+
+        mapping.Character.Should().Be('[');
+    }
+
+    [Fact]
+    public void TranslationContextIsAllocationFreeValueData()
+    {
+        var context = new KeyboardLayoutTranslationContext(
+            KeyboardPlatform.iOS,
+            nativeKeyCode: 0x2F,
+            KeyModifiers.Shift,
+            capsLock: false);
+
+        context.Platform.Should().Be(KeyboardPlatform.iOS);
+        context.NativeKeyCode.Should().Be(0x2F);
+        context.Modifiers.Should().Be(KeyModifiers.Shift);
+    }
 }

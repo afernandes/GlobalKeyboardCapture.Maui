@@ -1,0 +1,50 @@
+{
+  "$schema": "https://raw.githubusercontent.com/dotnet/docfx/main/schemas/docfx.schema.json",
+  "metadata": [
+    {
+      "src": [
+        {
+          "src": "..",
+          "files": [
+            "GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj"
+          ]
+        }
+      ],
+      "dest": "api",
+      "properties": {
+        "Configuration": "Release",
+        "TargetFramework": "net10.0-android",
+        "TargetFrameworks": "net10.0-android"
+      }
+    }
+  ],
+  "build": {
+    "content": [
+      {
+        "files": [
+          "**/*.md",
+          "**/*.yml"
+        ],
+        "exclude": [
+          "_site/**"
+        ]
+      }
+    ],
+    "output": "_site",
+    "template": [
+      "default",
+      "modern"
+    ],
+    "globalMetadata": {
+      "_appName": "GlobalKeyboardCapture.Maui",
+      "_appTitle": "GlobalKeyboardCapture.Maui",
+      "_appFooter": "GlobalKeyboardCapture.Maui — documentação da linha 2.x",
+      "_enableSearch": true,
+      "_disableContribution": false,
+      "_gitContribute": {
+        "repo": "https://github.com/afernandes/GlobalKeyboardCapture.Maui",
+        "branch": "main"
+      }
+    }
+  }
+}
