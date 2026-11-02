@@ -1,5 +1,7 @@
 # GlobalKeyboardCapture.Maui
 
+English | [Español](README.es-ES.md)
+
 Application-wide physical-keyboard capture for .NET MAUI, with typed hotkeys, keyboard-wedge barcode scanning, key sequences, diagnostics, and Windows operating-system global hotkeys.
 
 [![NuGet](https://img.shields.io/nuget/v/GlobalKeyboardCapture.Maui.svg)](https://www.nuget.org/packages/GlobalKeyboardCapture.Maui/)

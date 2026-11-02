@@ -65,11 +65,13 @@ jobs:
           - name: iOS
             os: macos-26
             workload: maui-ios
+            workload_version_args: --version 10.0.401
             tfm: net10.0-ios
             sample_runtime_args: -r iossimulator-arm64
           - name: Mac Catalyst
             os: macos-26
             workload: maui-maccatalyst
+            workload_version_args: --version 10.0.401
             tfm: net10.0-maccatalyst
             sample_runtime_args: -r maccatalyst-arm64
     steps:
@@ -80,8 +82,14 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      # macos-26 ships Xcode 26.6. The 10.0.401 workload set is the
+      # corresponding serviced Apple SDK; later sets require Xcode 27.x.
+      - name: Select supported Xcode
+        if: runner.os == 'macOS'
+        run: sudo xcode-select --switch /Applications/Xcode_26.6.app/Contents/Developer
+
       - name: Install platform workload
-        run: dotnet workload install ${{ matrix.workload }} --ignore-failed-sources
+        run: dotnet workload install ${{ matrix.workload }} ${{ matrix.workload_version_args }} --ignore-failed-sources
 
       - name: Build library
         run: dotnet build GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -c Release -f ${{ matrix.tfm }} -p:TargetFrameworks=${{ matrix.tfm }}
