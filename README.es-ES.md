@@ -235,4 +235,3 @@ dotnet pack GlobalKeyboardCapture.Maui/GlobalKeyboardCapture.Maui.csproj -c Rele
 Las issues y contribuciones son bienvenidas. Al informar de una tecla ausente, indique plataforma, diagnósticos nativos, modelo de teclado o lector, distribución y una reproducción mínima.
 
 Licencia [MIT](LICENSE). Copyright Anderson Fernandes do Nascimento.
-
